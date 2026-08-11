@@ -13,10 +13,6 @@ export function initAutoScaler() {
     if (!canvas) return;
 
     function scaleGame() {
-        // Updated to 1170x540 (19.5:9) to fit modern wide phones perfectly!
-        const targetWidth = 1170;
-        const targetHeight = 540;
-
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
         
@@ -28,10 +24,23 @@ export function initAutoScaler() {
             if (portraitWarning) portraitWarning.style.display = 'none';
         }
 
-        // Calculate scale to fit inside window while preserving 19.5:9 aspect ratio
-        const scaleX = windowWidth / targetWidth;
-        const scaleY = windowHeight / targetHeight;
-        const scale = Math.min(scaleX, scaleY);
+        // DYNAMIC WIDTH SCALING: Always fill 100% of the screen height (Y is maxed),
+        // and stretch the canvas X to perfectly fit whatever the device width is!
+        const targetHeight = 540;
+        let scale = windowHeight / targetHeight;
+        let dynamicWidth = windowWidth / scale;
+
+        // SAFEGUARD: If the screen is squarish (like an iPad) and the dynamic width 
+        // drops below 960px, it will crush our UI layout! 
+        // In that case, we fall back to fitting the width and letterboxing the height.
+        if (dynamicWidth < 960) {
+            dynamicWidth = 960;
+            scale = windowWidth / dynamicWidth;
+        }
+
+        // Apply the dynamic width so the game viewport expands horizontally
+        canvas.style.width = `${dynamicWidth}px`;
+        canvas.style.height = `${targetHeight}px`;
 
         canvas.style.transform = `scale(${scale})`;
         canvas.style.transformOrigin = 'center center';
