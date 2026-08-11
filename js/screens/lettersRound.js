@@ -444,12 +444,6 @@ function renderDeclaringPhaseUI() {
                     <div style="flex:1; min-height:0; overflow-y:auto; padding-right:6px; border:1px solid #334155; background:#0f172a; border-radius:12px; padding:10px;">
                         <div id="declarationOptionList" class="declaration-options" style="gap:8px;"></div>
                     </div>
-
-                    <!-- ALWAYS ALLOW TYPING/DECLARING YOUR WORD AFTER CLOCK EXPIRES -->
-                    <div style="display:flex; gap:8px; margin-top:12px; align-items:center;">
-                        <input type="text" id="manualDeclInput" class="styled-input" placeholder="OR TYPE YOUR WORD HERE..." style="flex:1; font-weight:900; text-transform:uppercase; border:2px solid var(--gold); background:#0f172a; color:#ffffff; padding:10px;" />
-                        <button id="btnSubmitManualDecl" class="btn btn-gold" style="padding:10px 16px; font-weight:900; white-space:nowrap;">⭐ DECLARE WORD</button>
-                    </div>
                 </div>
             </main>
         </div>
@@ -457,41 +451,27 @@ function renderDeclaringPhaseUI() {
 
     containerRef.querySelector('#btnNewRoundDecl').addEventListener('click', startNewRound);
 
-    const manualInput = containerRef.querySelector('#manualDeclInput');
-    const btnSubmitManual = containerRef.querySelector('#btnSubmitManualDecl');
-    if (btnSubmitManual && manualInput) {
-        btnSubmitManual.addEventListener('click', () => {
-            const word = manualInput.value.trim().toUpperCase();
-            if (word) processDeclaredWord(word);
-        });
-        manualInput.addEventListener('keydown', (e) => {
-            if (e.key === 'ENTER') {
-                const word = manualInput.value.trim().toUpperCase();
-                if (word) processDeclaredWord(word);
-            }
-        });
-    }
-
     const declarationOptionList = containerRef.querySelector('#declarationOptionList');
     declarationOptionList.innerHTML = '';
 
     if (state.savedWords.length === 0) {
-        const placeholderMsg = document.createElement('div');
-        placeholderMsg.style.color = '#94a3b8';
-        placeholderMsg.style.padding = '10px';
-        placeholderMsg.textContent = 'No words were saved during the timer. Type your word in the box below!';
-        declarationOptionList.appendChild(placeholderMsg);
-    } else {
-        state.savedWords.forEach((word) => {
-            const btn = document.createElement('button');
-            btn.className = 'decl-btn';
-            btn.style.padding = '14px 20px';
-            btn.style.fontSize = '1.15rem';
-            btn.innerHTML = `<span>⭐ DECLARE "${word}"</span><span class="chip-len" style="font-size:0.9rem; padding:4px 10px;">${word.length} PTS</span>`;
-            btn.addEventListener('click', () => processDeclaredWord(word));
-            declarationOptionList.appendChild(btn);
-        });
+        const btn = document.createElement('button');
+        btn.className = 'decl-btn';
+        btn.innerHTML = `<span>❌ NO WORD SAVED IN NOTEPAD</span><span>0 PTS</span>`;
+        btn.addEventListener('click', () => processDeclaredWord(''));
+        declarationOptionList.appendChild(btn);
+        return;
     }
+
+    state.savedWords.forEach((word) => {
+        const btn = document.createElement('button');
+        btn.className = 'decl-btn';
+        btn.style.padding = '14px 20px';
+        btn.style.fontSize = '1.15rem';
+        btn.innerHTML = `<span>⭐ DECLARE "${word}"</span><span class="chip-len" style="font-size:0.9rem; padding:4px 10px;">${word.length} PTS</span>`;
+        btn.addEventListener('click', () => processDeclaredWord(word));
+        declarationOptionList.appendChild(btn);
+    });
 }
 
 async function processDeclaredWord(word) {
