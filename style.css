@@ -61,9 +61,9 @@ html, body {
     overflow: hidden;
 }
 
-/* VIRTUAL 16:9 FIXED RESOLUTION VIEWPORT (960x540) */
+/* VIRTUAL 19.5:9 WIDESCREEN RESOLUTION VIEWPORT (1170x540) */
 .game-viewport {
-    width: 960px;
+    width: 1170px;
     height: 540px;
     background: var(--bg-main);
     background-image: radial-gradient(circle at center, #1e293b 0%, #0b1329 100%);

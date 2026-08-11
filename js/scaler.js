@@ -19,8 +19,16 @@ export function initAutoScaler() {
 
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
+        
+        // Show warning if in portrait mode
+        const portraitWarning = document.getElementById('portraitWarning');
+        if (windowHeight > windowWidth) {
+            if (portraitWarning) portraitWarning.style.display = 'flex';
+        } else {
+            if (portraitWarning) portraitWarning.style.display = 'none';
+        }
 
-        // Calculate scale to fit inside window while preserving 16:9 aspect ratio
+        // Calculate scale to fit inside window while preserving 19.5:9 aspect ratio
         const scaleX = windowWidth / targetWidth;
         const scaleY = windowHeight / targetHeight;
         const scale = Math.min(scaleX, scaleY);

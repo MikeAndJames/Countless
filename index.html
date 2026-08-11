@@ -11,6 +11,13 @@
     <link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
+    <!-- PORTRAIT ROTATION WARNING OVERLAY -->
+    <div id="portraitWarning" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0f172a; z-index:10000; flex-direction:column; justify-content:center; align-items:center; color:white; text-align:center; padding:20px;">
+        <span style="font-size:4rem; margin-bottom:20px;">🔄</span>
+        <h2 style="font-family:'Outfit', sans-serif; font-weight:900; margin-bottom:15px; font-size: 2rem;">PLEASE ROTATE DEVICE</h2>
+        <p style="font-family:'Outfit', sans-serif; font-size:1.1rem; color:#fbbf24; font-weight:600;">Countless requires a landscape orientation to fit the game board.</p>
+    </div>
+
     <!-- MOBILE FULLSCREEN OVERLAY -->
     <div id="mobileFullscreenOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0f172a; z-index:9999; flex-direction:column; justify-content:center; align-items:center; color:white; text-align:center; padding:20px;">
         <span style="font-size:4rem; margin-bottom:20px;">📱</span>
