@@ -16,6 +16,11 @@ const CONSONANTS = [...'B'.repeat(2), ...'C'.repeat(3), ...'D'.repeat(6), ...'F'
 const LARGE_NUMBERS = [25, 50, 75, 100];
 const SMALL_NUMBERS = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10];
 
+export let lobbySettings = {
+    roomCode: 'GRANDAD80',
+    allowHouseRules: true
+};
+
 export async function renderLobbyScreen(container, onStartGame) {
     containerRef = container;
     onStartGameCallback = onStartGame;

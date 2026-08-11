@@ -139,7 +139,6 @@ async function startNewConundrum(initialGameData = null) {
     }
 
     const scrambledChars = scrambleWord(state.targetWord);
-    const scrambledChars = scrambleWord(state.targetWord);
 
     state.scrambledTiles = scrambledChars.split('').map((char, index) => ({
         id: index,
