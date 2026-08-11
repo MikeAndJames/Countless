@@ -8,17 +8,18 @@
  */
 
 import { initAutoScaler } from './scaler.js';
+import { renderSplashScreen } from './screens/splashScreen.js';
 import { renderLobbyScreen } from './screens/lobbyScreen.js';
 import { renderLettersRound, cleanupLettersRound } from './screens/lettersRound.js';
 import { renderNumbersRound, cleanupNumbersRound } from './screens/numbersRound.js';
 import { renderConundrumRound, cleanupConundrumRound } from './screens/conundrumRound.js';
 
-let activeScreen = 'letters';
+let activeScreen = 'splash';
 
 document.addEventListener('DOMContentLoaded', () => {
     initAutoScaler();
     initNavigation();
-    switchScreen('letters');
+    switchScreen('splash');
 });
 
 function initNavigation() {
@@ -53,7 +54,9 @@ export function switchScreen(screenName) {
     const appMount = document.getElementById('appMount');
     if (!appMount) return;
 
-    if (screenName === 'lobby') {
+    if (screenName === 'splash') {
+        renderSplashScreen(appMount, (targetScreen) => switchScreen(targetScreen));
+    } else if (screenName === 'lobby') {
         renderLobbyScreen(appMount, (selectedRound) => switchScreen(selectedRound));
     } else if (screenName === 'letters') {
         renderLettersRound(appMount);

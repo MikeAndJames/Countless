@@ -695,6 +695,165 @@ html, body {
     border-radius: 8px;
 }
 
+/* ===================================================================
+   ANIMATED SPLASH SCREEN & BIRTHDAY DEDICATION STYLES
+   =================================================================== */
+.splash-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+}
+
+.splash-backdrop-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.2) 0%, rgba(0,0,0,0) 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: pulse 3s infinite alternate ease-in-out;
+}
+
+.splash-card {
+    background: rgba(15, 23, 42, 0.95);
+    border: 2px solid var(--gold);
+    border-radius: 20px;
+    padding: 20px 32px;
+    max-width: 680px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(245, 158, 11, 0.3);
+    z-index: 10;
+    text-align: center;
+}
+
+.birthday-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid var(--gold);
+    padding: 4px 16px;
+    border-radius: 20px;
+    color: var(--gold);
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+}
+
+.splash-title {
+    font-family: var(--font-main);
+    font-size: 3.4rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #f59e0b 0%, #fef08a 50%, #f59e0b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.6));
+    margin: 0;
+}
+
+.splash-tagline {
+    font-size: 0.85rem;
+    font-weight: 900;
+    color: #94a3b8;
+    letter-spacing: 3px;
+    margin-top: -6px;
+}
+
+.dedication-box {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px dashed var(--gold);
+    border-radius: 12px;
+    padding: 8px 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.dedication-text {
+    font-size: 0.95rem;
+    color: #f1f5f9;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.dedication-text strong {
+    color: var(--gold);
+}
+
+.splash-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 420px;
+    margin-top: 4px;
+}
+
+.splash-btn {
+    padding: 10px 20px;
+    font-size: 1.05rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.splash-btn:hover {
+    transform: scale(1.03);
+}
+
+.btn-host {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #0f172a;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+
+.btn-join {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+}
+
+.btn-solo {
+    background: #334155;
+    color: #f1f5f9;
+    border: 1px solid #64748b;
+}
+
+.room-code-card {
+    background: #0f172a;
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.room-code-display {
+    font-family: var(--font-mono);
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+}
+
 .result-def {
     font-size: 0.85rem;
     color: #cbd5e1;
