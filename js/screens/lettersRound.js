@@ -15,8 +15,38 @@ import { playSound, playTick, playGong, playVictoryChime } from '../audio.js';
 import { CountdownClockComponent } from '../clock.js';
 import { lobbySettings } from './lobbyScreen.js';
 
-const VOWELS = ['A','A','A','A','A','E','E','E','E','E','E','E','I','I','I','I','O','O','O','O','U','U'];
-const CONSONANTS = ['B','C','D','D','F','G','H','J','K','L','L','M','N','N','P','Q','R','R','S','S','T','T','V','W','X','Y','Z'];
+// Official TV Countdown Weighted Letter Stacks (67 Vowels & 74 Consonants)
+const VOWELS = [
+    ...'A'.repeat(15),
+    ...'E'.repeat(21),
+    ...'I'.repeat(13),
+    ...'O'.repeat(13),
+    ...'U'.repeat(5)
+];
+
+const CONSONANTS = [
+    ...'B'.repeat(2),
+    ...'C'.repeat(3),
+    ...'D'.repeat(6),
+    ...'F'.repeat(2),
+    ...'G'.repeat(3),
+    ...'H'.repeat(2),
+    ...'J'.repeat(1),
+    ...'K'.repeat(1),
+    ...'L'.repeat(5),
+    ...'M'.repeat(4),
+    ...'N'.repeat(8),
+    ...'P'.repeat(4),
+    ...'Q'.repeat(1),
+    ...'R'.repeat(9),
+    ...'S'.repeat(9),
+    ...'T'.repeat(9),
+    ...'V'.repeat(1),
+    ...'W'.repeat(1),
+    ...'X'.repeat(1),
+    ...'Y'.repeat(1),
+    ...'Z'.repeat(1)
+];
 
 let state = {
     allDrawnLetters: [],
