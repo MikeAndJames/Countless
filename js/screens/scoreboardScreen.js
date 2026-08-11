@@ -1,5 +1,6 @@
 import { multiplayerService } from '../multiplayer.js';
 import { dictionaryEngine } from '../dictionary.js';
+import { scrambleWord } from './conundrumRound.js';
 
 let containerRef = null;
 let onStartGameCallback = null;
@@ -79,7 +80,12 @@ function attachEvents() {
             
             // Generate conundrum word on Host so all clients receive the exact same word
             const targetWord = await dictionaryEngine.getRandom9LetterWordAsync();
-            await multiplayerService.broadcastRoundStart('conundrum', { conundrumWord: targetWord });
+            const scrambled = scrambleWord(targetWord);
+            
+            await multiplayerService.broadcastRoundStart('conundrum', { 
+                conundrumWord: targetWord, 
+                scrambledWord: scrambled 
+            });
         });
     }
 }

@@ -138,7 +138,12 @@ async function startNewConundrum(initialGameData = null) {
         state.targetWord = await dictionaryEngine.getRandom9LetterWordAsync();
     }
 
-    const scrambledChars = scrambleWord(state.targetWord);
+    let scrambledChars;
+    if (initialGameData && initialGameData.scrambledWord) {
+        scrambledChars = initialGameData.scrambledWord;
+    } else {
+        scrambledChars = scrambleWord(state.targetWord);
+    }
 
     state.scrambledTiles = scrambledChars.split('').map((char, index) => ({
         id: index,
@@ -161,7 +166,7 @@ async function startNewConundrum(initialGameData = null) {
     playSound(520, 0.08);
 }
 
-function scrambleWord(word) {
+export function scrambleWord(word) {
     const chars = word.split('');
     for (let i = chars.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
