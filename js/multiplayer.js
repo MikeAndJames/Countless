@@ -80,6 +80,9 @@ export class MultiplayerService {
             }
         };
 
+        this.timeHandicap = 30;
+        this.scoreMultiplier = 1.0;
+
         await set(roomRef, roomData);
         console.log(`Created Firebase Room: ${cleanCode}`);
         return roomData;
@@ -99,6 +102,8 @@ export class MultiplayerService {
 
         this.currentRoomCode = cleanCode;
         this.currentPlayerId = `p_${Date.now()}`;
+        this.timeHandicap = Number(timeHandicap) || 30;
+        this.scoreMultiplier = Number(scoreMultiplier) || 1.25;
 
         const playerRef = ref(db, `rooms/${cleanCode}/players/${this.currentPlayerId}`);
         const playerData = {
