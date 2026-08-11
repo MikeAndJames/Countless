@@ -68,7 +68,7 @@ export function renderSplashScreen(container, onNavigate) {
 
                     <div class="room-code-card">
                         <span style="font-size:0.85rem; color:#94a3b8; font-weight:800;">YOUR ROOM CODE:</span>
-                        <div class="room-code-display" id="generatedRoomCode">GRAMPS80</div>
+                        <div class="room-code-display" id="generatedRoomCode">GRANDAD80</div>
                         <span style="font-size:0.75rem; color:var(--gold); font-weight:800;">Share this code with Gramps & Family!</span>
                     </div>
 
@@ -92,7 +92,7 @@ export function renderSplashScreen(container, onNavigate) {
                     <div style="display:flex; flex-direction:column; gap:10px;">
                         <div style="display:flex; flex-direction:column; gap:4px;">
                             <label style="font-size:0.85rem; color:#94a3b8; font-weight:800;">ENTER ROOM CODE:</label>
-                            <input type="text" id="joinRoomCodeInput" class="styled-input" placeholder="e.g. GRAMPS80" style="padding:8px 12px; text-transform:uppercase; font-weight:900; font-size:1.2rem; border-radius:8px; border:2px solid var(--gold); background:#0f172a; color:#ffffff;" />
+                            <input type="text" id="joinRoomCodeInput" class="styled-input" value="GRANDAD80" placeholder="e.g. GRANDAD80" style="padding:8px 12px; text-transform:uppercase; font-weight:900; font-size:1.2rem; border-radius:8px; border:2px solid var(--gold); background:#0f172a; color:#ffffff;" />
                         </div>
 
                         <div style="display:flex; flex-direction:column; gap:4px;">

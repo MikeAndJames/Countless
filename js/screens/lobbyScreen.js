@@ -15,11 +15,19 @@ export let lobbySettings = {
     allowHouseRules: true
 };
 
-export function renderLobbyScreen(container, onStartGame) {
+export async function renderLobbyScreen(container, onStartGame) {
     containerRef = container;
     onStartGameCallback = onStartGame;
 
-    const currentCode = multiplayerService.currentRoomCode || 'GRAMPS80';
+    if (!multiplayerService.currentRoomCode) {
+        try {
+            await multiplayerService.createRoom('GRANDAD80', 'James & Mike');
+        } catch (e) {
+            console.warn("Auto-creating room GRANDAD80:", e);
+        }
+    }
+
+    const currentCode = multiplayerService.currentRoomCode || 'GRANDAD80';
 
     container.innerHTML = `
         <div class="widescreen-layout">
