@@ -281,7 +281,11 @@ async function submitConundrumAnswer() {
 
     resultBox.classList.remove('hidden');
 
-    if (guess === state.targetWord) {
+    const scrambledStr = state.scrambledTiles.map(t => t.char).join('');
+    const isAnagram = isAnagramOfScrambled(guess, scrambledStr);
+    const isValidDictWord = dictionaryEngine.isValidWord(guess);
+
+    if (guess === state.targetWord || (isAnagram && isValidDictWord)) {
         resultBox.classList.remove('invalid');
         title.textContent = `🎯 CORRECT CONUNDRUM! "${guess}"`;
         scorePill.textContent = `10 PTS`;
@@ -293,9 +297,22 @@ async function submitConundrumAnswer() {
         title.textContent = `❌ INCORRECT GUESS! "${guess}"`;
         scorePill.textContent = `0 PTS`;
         const def = await dictionaryEngine.getDefinitionAsync(state.targetWord);
-        defText.textContent = `The correct 9-letter word was "${state.targetWord}". Definition: ${def}`;
+        defText.textContent = `The target 9-letter word was "${state.targetWord}". Definition: ${def}`;
         playSound(220, 0.3);
     }
+}
+
+function isAnagramOfScrambled(guess, scrambled) {
+    if (guess.length !== 9 || scrambled.length !== 9) return false;
+    const count = {};
+    for (const char of scrambled) {
+        count[char] = (count[char] || 0) + 1;
+    }
+    for (const char of guess) {
+        if (!count[char]) return false;
+        count[char]--;
+    }
+    return true;
 }
 
 function resetAndStartTimer() {
