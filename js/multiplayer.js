@@ -135,7 +135,31 @@ export class MultiplayerService {
     }
 
     /**
-     * 4. UPDATE ROOM GAME STATE (Host Actions)
+     * 4. CHECK IF CURRENT PLAYER IS HOST
+     */
+    isHost(playersObj) {
+        if (!this.currentPlayerId || !playersObj) return false;
+        const player = playersObj[this.currentPlayerId];
+        return player ? Boolean(player.isHost) : false;
+    }
+
+    /**
+     * 5. BROADCAST ROUND START (Host Actions)
+     * Writes round data (drawn letters, target numbers, etc.) to Firebase so all devices see identical tiles!
+     */
+    async broadcastRoundStart(roundType, gameData) {
+        if (!this.currentRoomCode) return;
+        const roomRef = ref(db, `rooms/${this.currentRoomCode}`);
+        await update(roomRef, {
+            status: "playing",
+            activeScreen: roundType,
+            gameData: gameData,
+            lastUpdated: Date.now()
+        });
+    }
+
+    /**
+     * 6. UPDATE ROOM GAME STATE (Host Actions)
      */
     async updateGameState(updates) {
         if (!this.currentRoomCode) return;

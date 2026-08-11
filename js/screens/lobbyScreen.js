@@ -1,19 +1,20 @@
 /**
  * ===================================================================
- * COUNTLESS - LOBBY & LIVE MULTIPLAYER PLAYER LIST MODULE
+ * COUNTLESS - LOBBY & REALTIME MULTIPLAYER ROUND LAUNCHER
  * ===================================================================
  */
 
 import { playSound } from '../audio.js';
 import { multiplayerService } from '../multiplayer.js';
+import { dictionaryEngine } from '../dictionary.js';
 
 let containerRef = null;
 let onStartGameCallback = null;
 
-export let lobbySettings = {
-    roomCode: 'GRAMPS80',
-    allowHouseRules: true
-};
+const VOWELS = [...'A'.repeat(15), ...'E'.repeat(21), ...'I'.repeat(13), ...'O'.repeat(13), ...'U'.repeat(5)];
+const CONSONANTS = [...'B'.repeat(2), ...'C'.repeat(3), ...'D'.repeat(6), ...'F'.repeat(2), ...'G'.repeat(3), ...'H'.repeat(2), ...'J'.repeat(1), ...'K'.repeat(1), ...'L'.repeat(5), ...'M'.repeat(4), ...'N'.repeat(8), ...'P'.repeat(4), ...'Q'.repeat(1), ...'R'.repeat(9), ...'S'.repeat(9), ...'T'.repeat(9), ...'V'.repeat(1), ...'W'.repeat(1), ...'X'.repeat(1), ...'Y'.repeat(1), ...'Z'.repeat(1)];
+const LARGE_NUMBERS = [25, 50, 75, 100];
+const SMALL_NUMBERS = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10];
 
 export async function renderLobbyScreen(container, onStartGame) {
     containerRef = container;
@@ -64,40 +65,15 @@ export async function renderLobbyScreen(container, onStartGame) {
                         </div>
                     </div>
 
-                    <div class="lobby-section">
-                        <h3>2. Launch Game Round (Host Controls)</h3>
-                        <div class="round-select-grid">
-                            <button class="btn btn-gold btn-large round-btn" data-round="letters">
-                                🔤 LETTERS ROUND
-                            </button>
-                            <button class="btn btn-primary btn-large round-btn" data-round="numbers">
-                                🔢 NUMBERS ROUND
-                            </button>
-                            <button class="btn btn-vowel btn-large round-btn" data-round="conundrum">
-                                🧩 CONUNDRUM ROUND
-                            </button>
-                        </div>
+                    <div id="lobbyControlsSection" class="lobby-section">
+                        <!-- Rendered dynamically based on Host vs Guest status -->
                     </div>
                 </div>
             </main>
         </div>
     `;
 
-    attachEvents();
     subscribeToRoomUpdates();
-}
-
-function attachEvents() {
-    const roundBtns = containerRef.querySelectorAll('.round-btn');
-    roundBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const roundType = btn.getAttribute('data-round');
-            playSound(600, 0.08);
-            if (onStartGameCallback) {
-                onStartGameCallback(roundType);
-            }
-        });
-    });
 }
 
 function subscribeToRoomUpdates() {
@@ -105,8 +81,103 @@ function subscribeToRoomUpdates() {
     if (!code) return;
 
     multiplayerService.listenToRoom(code, (roomData) => {
+        if (!containerRef) return;
+
+        // 1. Render Connected Player List
         renderPlayerListUI(roomData.players);
+
+        // 2. Render Host vs Guest Control Section
+        const isHost = multiplayerService.isHost(roomData.players);
+        renderControlsUI(isHost);
+
+        // 3. AUTO-LAUNCH ROUND IF HOST BROADCASTED 'playing' STATUS!
+        if (roomData.status === 'playing' && roomData.activeScreen && onStartGameCallback) {
+            onStartGameCallback(roomData.activeScreen, roomData.gameData);
+        }
     });
+}
+
+function renderControlsUI(isHost) {
+    const section = containerRef.querySelector('#lobbyControlsSection');
+    if (!section) return;
+
+    if (isHost) {
+        section.innerHTML = `
+            <h3>2. Launch Game Round (Host Controls)</h3>
+            <div class="round-select-grid">
+                <button id="btnLaunchLetters" class="btn btn-gold btn-large round-btn">
+                    🔤 LETTERS ROUND
+                </button>
+                <button id="btnLaunchNumbers" class="btn btn-primary btn-large round-btn">
+                    🔢 NUMBERS ROUND
+                </button>
+                <button id="btnLaunchConundrum" class="btn btn-vowel btn-large round-btn">
+                    🧩 CONUNDRUM ROUND
+                </button>
+            </div>
+        `;
+        attachHostEvents();
+    } else {
+        section.innerHTML = `
+            <div style="background:#0f172a; padding:24px; border-radius:14px; border:2px solid var(--gold); text-align:center;">
+                <h3 style="color:var(--gold); font-size:1.4rem; margin-bottom:8px;">⌛ WAITING FOR HOST TO START...</h3>
+                <p style="color:#94a3b8; font-size:0.95rem; margin:0;">Sit back! The game round will start automatically on your screen the moment the Host launches it.</p>
+            </div>
+        `;
+    }
+}
+
+function attachHostEvents() {
+    const btnLetters = containerRef.querySelector('#btnLaunchLetters');
+    const btnNumbers = containerRef.querySelector('#btnLaunchNumbers');
+    const btnConundrum = containerRef.querySelector('#btnLaunchConundrum');
+
+    if (btnLetters) {
+        btnLetters.addEventListener('click', async () => {
+            playSound(600, 0.08);
+
+            // Generate Host Letters
+            const letters = [];
+            for (let i = 0; i < 3; i++) letters.push(VOWELS[Math.floor(Math.random() * VOWELS.length)]);
+            for (let i = 0; i < 6; i++) letters.push(CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)]);
+            fisherYatesShuffle(letters);
+
+            await multiplayerService.broadcastRoundStart('letters', { drawnLetters: letters });
+        });
+    }
+
+    if (btnNumbers) {
+        btnNumbers.addEventListener('click', async () => {
+            playSound(600, 0.08);
+
+            // Generate Host Numbers
+            const drawn = [];
+            const largeCopy = [...LARGE_NUMBERS];
+            const smallCopy = [...SMALL_NUMBERS];
+            for (let i = 0; i < 2; i++) drawn.push(largeCopy.splice(Math.floor(Math.random() * largeCopy.length), 1)[0]);
+            for (let i = 0; i < 4; i++) drawn.push(smallCopy.splice(Math.floor(Math.random() * smallCopy.length), 1)[0]);
+            const target = Math.floor(Math.random() * 899) + 101;
+
+            await multiplayerService.broadcastRoundStart('numbers', { drawnNumbers: drawn, targetNumber: target });
+        });
+    }
+
+    if (btnConundrum) {
+        btnConundrum.addEventListener('click', async () => {
+            playSound(600, 0.08);
+
+            // Generate Host Conundrum Word
+            const targetWord = await dictionaryEngine.getRandom9LetterWordAsync();
+            await multiplayerService.broadcastRoundStart('conundrum', { conundrumWord: targetWord });
+        });
+    }
+}
+
+function fisherYatesShuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
 }
 
 function renderPlayerListUI(players) {
@@ -123,7 +194,6 @@ function renderPlayerListUI(players) {
         item.style.fontSize = '0.9rem';
 
         const isMe = p.id === multiplayerService.currentPlayerId;
-        const hostBadge = p.isHost ? '👑 HOST' : 'PLAYER';
         
         item.innerHTML = `
             <span>${p.isHost ? '👑 ' : '🎮 '}<strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold);">(YOU)</small>' : ''}</span>

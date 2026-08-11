@@ -33,7 +33,7 @@ let state = {
 
 let containerRef = null;
 
-export function renderNumbersRound(container) {
+export function renderNumbersRound(container, initialGameData = null) {
     containerRef = container;
     container.innerHTML = `
         <div class="widescreen-layout">
@@ -113,7 +113,7 @@ export function renderNumbersRound(container) {
     `;
 
     attachEvents();
-    startNewNumbersRound();
+    startNewNumbersRound(initialGameData);
 }
 
 export function cleanupNumbersRound() {
@@ -127,13 +127,13 @@ function attachEvents() {
     const btnUndo = containerRef.querySelector('#btnUndoStep');
     const btnSubmit = containerRef.querySelector('#btnSubmitNumber');
     const btnAI = containerRef.querySelector('#btnSolveNumbersAI');
+    const btnCloseAI = containerRef.querySelector('#btnCloseNumbersAI');
 
-    btnNew.addEventListener('click', startNewNumbersRound);
+    btnNew.addEventListener('click', () => startNewNumbersRound());
     btnUndo.addEventListener('click', undoLastStep);
     btnSubmit.addEventListener('click', submitNumberScore);
     btnAI.addEventListener('click', toggleAIMathSolver);
-
-    containerRef.querySelector('#btnCloseNumbersAI').addEventListener('click', () => {
+    if (btnCloseAI) btnCloseAI.addEventListener('click', () => {
         containerRef.querySelector('#numbersAIResults').classList.add('hidden');
     });
 
@@ -142,27 +142,35 @@ function attachEvents() {
     });
 }
 
-function startNewNumbersRound() {
+function startNewNumbersRound(initialGameData = null) {
     stopTimer();
     if (state.dealInterval) clearInterval(state.dealInterval);
 
-    const drawn = [];
-    const largeCopy = [...LARGE_NUMBERS];
-    const smallCopy = [...SMALL_NUMBERS];
+    let drawn = [];
+    let target = 0;
 
-    for (let i = 0; i < 2; i++) {
-        const idx = Math.floor(Math.random() * largeCopy.length);
-        drawn.push(largeCopy.splice(idx, 1)[0]);
-    }
-    for (let i = 0; i < 4; i++) {
-        const idx = Math.floor(Math.random() * smallCopy.length);
-        drawn.push(smallCopy.splice(idx, 1)[0]);
+    if (initialGameData && Array.isArray(initialGameData.drawnNumbers) && initialGameData.drawnNumbers.length === 6) {
+        drawn = [...initialGameData.drawnNumbers];
+        target = initialGameData.targetNumber || 500;
+    } else {
+        const largeCopy = [...LARGE_NUMBERS];
+        const smallCopy = [...SMALL_NUMBERS];
+
+        for (let i = 0; i < 2; i++) {
+            const idx = Math.floor(Math.random() * largeCopy.length);
+            drawn.push(largeCopy.splice(idx, 1)[0]);
+        }
+        for (let i = 0; i < 4; i++) {
+            const idx = Math.floor(Math.random() * smallCopy.length);
+            drawn.push(smallCopy.splice(idx, 1)[0]);
+        }
+        target = Math.floor(Math.random() * 899) + 101;
     }
 
     state.allDrawnNumbers = drawn;
     state.originalTiles = drawn;
     state.workingTiles = [];
-    state.targetNumber = Math.floor(Math.random() * 899) + 101;
+    state.targetNumber = target;
     state.selectedFirst = null;
     state.selectedOp = null;
     state.history = [];

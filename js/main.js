@@ -32,7 +32,7 @@ function initNavigation() {
     });
 }
 
-export function switchScreen(screenName) {
+export function switchScreen(screenName, initialGameData = null) {
     // 1. Cleanup current screen
     if (activeScreen === 'letters') cleanupLettersRound();
     else if (activeScreen === 'numbers') cleanupNumbersRound();
@@ -55,14 +55,14 @@ export function switchScreen(screenName) {
     if (!appMount) return;
 
     if (screenName === 'splash') {
-        renderSplashScreen(appMount, (targetScreen) => switchScreen(targetScreen));
+        renderSplashScreen(appMount, (targetScreen, gameData) => switchScreen(targetScreen, gameData));
     } else if (screenName === 'lobby') {
-        renderLobbyScreen(appMount, (selectedRound) => switchScreen(selectedRound));
+        renderLobbyScreen(appMount, (selectedRound, gameData) => switchScreen(selectedRound, gameData));
     } else if (screenName === 'letters') {
-        renderLettersRound(appMount);
+        renderLettersRound(appMount, initialGameData);
     } else if (screenName === 'numbers') {
-        renderNumbersRound(appMount);
+        renderNumbersRound(appMount, initialGameData);
     } else if (screenName === 'conundrum') {
-        renderConundrumRound(appMount);
+        renderConundrumRound(appMount, initialGameData);
     }
 }

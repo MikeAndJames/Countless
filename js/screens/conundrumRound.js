@@ -26,7 +26,7 @@ let state = {
 let containerRef = null;
 let keyListener = null;
 
-export function renderConundrumRound(container) {
+export function renderConundrumRound(container, initialGameData = null) {
     containerRef = container;
     container.innerHTML = `
         <div class="widescreen-layout">
@@ -87,7 +87,7 @@ export function renderConundrumRound(container) {
     `;
 
     attachEvents();
-    startNewConundrum();
+    startNewConundrum(initialGameData);
 }
 
 export function cleanupConundrumRound() {
@@ -96,7 +96,7 @@ export function cleanupConundrumRound() {
 }
 
 function attachEvents() {
-    containerRef.querySelector('#btnNewConundrum').addEventListener('click', startNewConundrum);
+    containerRef.querySelector('#btnNewConundrum').addEventListener('click', () => startNewConundrum());
     containerRef.querySelector('#btnBuzz').addEventListener('click', buzzIn);
     containerRef.querySelector('#btnSubmitConundrum').addEventListener('click', submitConundrumAnswer);
 }
@@ -127,12 +127,18 @@ function removeKeyboardListener() {
     }
 }
 
-async function startNewConundrum() {
+async function startNewConundrum(initialGameData = null) {
     stopTimer();
     removeKeyboardListener();
 
-    // 1. Pick a random 9-letter word from the 202,133-word dictionary!
-    state.targetWord = await dictionaryEngine.getRandom9LetterWordAsync();
+    if (initialGameData && initialGameData.conundrumWord) {
+        state.targetWord = initialGameData.conundrumWord.toUpperCase();
+    } else {
+        // 1. Pick a random 9-letter word from the 202,133-word dictionary!
+        state.targetWord = await dictionaryEngine.getRandom9LetterWordAsync();
+    }
+
+    const scrambledChars = scrambleWord(state.targetWord);
     const scrambledChars = scrambleWord(state.targetWord);
 
     state.scrambledTiles = scrambledChars.split('').map((char, index) => ({

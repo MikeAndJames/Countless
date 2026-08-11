@@ -67,9 +67,9 @@ let state = {
 
 let containerRef = null;
 
-export function renderLettersRound(container) {
+export function renderLettersRound(container, initialGameData = null) {
     containerRef = container;
-    startNewRound();
+    startNewRound(initialGameData);
 }
 
 export function cleanupLettersRound() {
@@ -77,15 +77,19 @@ export function cleanupLettersRound() {
     if (state.dealInterval) clearInterval(state.dealInterval);
 }
 
-function startNewRound() {
+function startNewRound(initialGameData = null) {
     stopTimer();
     if (state.dealInterval) clearInterval(state.dealInterval);
 
-    // Draw 3 Vowels + 6 Consonants
-    const letters = [];
-    for (let i = 0; i < 3; i++) letters.push(VOWELS[Math.floor(Math.random() * VOWELS.length)]);
-    for (let i = 0; i < 6; i++) letters.push(CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)]);
-    fisherYatesShuffle(letters);
+    let letters = [];
+    if (initialGameData && Array.isArray(initialGameData.drawnLetters) && initialGameData.drawnLetters.length === 9) {
+        letters = [...initialGameData.drawnLetters];
+    } else {
+        // Draw 3 Vowels + 6 Consonants from official weighted stacks
+        for (let i = 0; i < 3; i++) letters.push(VOWELS[Math.floor(Math.random() * VOWELS.length)]);
+        for (let i = 0; i < 6; i++) letters.push(CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)]);
+        fisherYatesShuffle(letters);
+    }
 
     state.allDrawnLetters = letters;
     state.topLetters = [];
