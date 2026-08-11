@@ -1,23 +1,25 @@
 /**
  * ===================================================================
- * COUNTLESS - LOBBY & ROOM MODULE (16:9 WIDESCREEN LANDSCAPE)
+ * COUNTLESS - LOBBY & LIVE MULTIPLAYER PLAYER LIST MODULE
  * ===================================================================
  */
 
 import { playSound } from '../audio.js';
+import { multiplayerService } from '../multiplayer.js';
 
 let containerRef = null;
 let onStartGameCallback = null;
 
 export let lobbySettings = {
-    roomCode: 'GRANDAD80',
-    handicap: 'mult20',
-    allowHouseRules: true // true = House Rules (Online challenges award points), false = Strict TV Rules (Vibes only)
+    roomCode: 'GRAMPS80',
+    allowHouseRules: true
 };
 
 export function renderLobbyScreen(container, onStartGame) {
     containerRef = container;
     onStartGameCallback = onStartGame;
+
+    const currentCode = multiplayerService.currentRoomCode || 'GRAMPS80';
 
     container.innerHTML = `
         <div class="widescreen-layout">
@@ -28,41 +30,34 @@ export function renderLobbyScreen(container, onStartGame) {
                 </div>
 
                 <div class="notepad-section">
-                    <span class="section-title">🎮 MULTIPLAYER:</span>
-                    <span class="notepad-placeholder">Host invites players to join using the room code!</span>
+                    <span class="section-title">🏠 ROOM CODE:</span>
+                    <div style="font-family:var(--font-mono); font-size:1.8rem; font-weight:900; color:var(--gold); text-align:center; padding:6px 0;">
+                        ${currentCode}
+                    </div>
+                </div>
+
+                <div class="notepad-section" style="flex:1;">
+                    <span class="section-title">👥 CONNECTED PLAYERS:</span>
+                    <div id="lobbyPlayerList" class="saved-words-chips" style="gap:6px;">
+                        <span class="notepad-placeholder">Connecting to Firebase...</span>
+                    </div>
                 </div>
             </aside>
 
             <main class="center-board">
                 <div class="lobby-card">
-                    <h2>🎮 MULTIPLAYER GAME LOBBY & HOUSE RULES</h2>
+                    <h2>🎮 MULTIPLAYER GAME LOBBY</h2>
 
                     <div class="lobby-section">
-                        <h3>1. Room & Dictionary Settings</h3>
+                        <h3>1. Room Information</h3>
                         <div class="control-group-row">
-                            <label>Room Code:</label>
-                            <input type="text" id="roomCodeInput" class="styled-input" value="${lobbySettings.roomCode}" style="text-transform:uppercase; font-weight:800;" />
-                        </div>
-                        <div class="control-group-row">
-                            <label>Player Handicap:</label>
-                            <select id="lobbyHandicap" class="styled-select">
-                                <option value="none" ${lobbySettings.handicap === 'none' ? 'selected' : ''}>Standard (No Handicap)</option>
-                                <option value="plus2" ${lobbySettings.handicap === 'plus2' ? 'selected' : ''}>+2 Bonus Points</option>
-                                <option value="time10" ${lobbySettings.handicap === 'time10' ? 'selected' : ''}>+10s Extra Time</option>
-                                <option value="mult20" ${lobbySettings.handicap === 'mult20' ? 'selected' : ''}>👑 Grandad Special (Double Points!)</option>
-                            </select>
-                        </div>
-                        <div class="control-group-row">
-                            <label>📜 Dictionary Challenge Rules:</label>
-                            <select id="lobbyRulesMode" class="styled-select">
-                                <option value="house" ${lobbySettings.allowHouseRules ? 'selected' : ''}>🟢 House Rules (Online Challenges Award Points!)</option>
-                                <option value="tv" ${!lobbySettings.allowHouseRules ? 'selected' : ''}>🔴 Strict TV Rules (Proper Nouns = 0 PTS, Vibes Only!)</option>
-                            </select>
+                            <label>Active Room Code:</label>
+                            <input type="text" id="roomCodeInput" class="styled-input" value="${currentCode}" readonly style="text-transform:uppercase; font-weight:900; color:var(--gold);" />
                         </div>
                     </div>
 
                     <div class="lobby-section">
-                        <h3>2. Select Round to Test / Play</h3>
+                        <h3>2. Launch Game Round (Host Controls)</h3>
                         <div class="round-select-grid">
                             <button class="btn btn-gold btn-large round-btn" data-round="letters">
                                 🔤 LETTERS ROUND
@@ -81,17 +76,10 @@ export function renderLobbyScreen(container, onStartGame) {
     `;
 
     attachEvents();
+    subscribeToRoomUpdates();
 }
 
 function attachEvents() {
-    const roomCodeInput = containerRef.querySelector('#roomCodeInput');
-    const lobbyHandicap = containerRef.querySelector('#lobbyHandicap');
-    const lobbyRulesMode = containerRef.querySelector('#lobbyRulesMode');
-
-    roomCodeInput.addEventListener('change', () => lobbySettings.roomCode = roomCodeInput.value.toUpperCase());
-    lobbyHandicap.addEventListener('change', () => lobbySettings.handicap = lobbyHandicap.value);
-    lobbyRulesMode.addEventListener('change', () => lobbySettings.allowHouseRules = (lobbyRulesMode.value === 'house'));
-
     const roundBtns = containerRef.querySelectorAll('.round-btn');
     roundBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -101,5 +89,40 @@ function attachEvents() {
                 onStartGameCallback(roundType);
             }
         });
+    });
+}
+
+function subscribeToRoomUpdates() {
+    const code = multiplayerService.currentRoomCode;
+    if (!code) return;
+
+    multiplayerService.listenToRoom(code, (roomData) => {
+        renderPlayerListUI(roomData.players);
+    });
+}
+
+function renderPlayerListUI(players) {
+    const playerListEl = containerRef.querySelector('#lobbyPlayerList');
+    if (!playerListEl || !players) return;
+
+    playerListEl.innerHTML = '';
+    const playerArray = Object.values(players);
+
+    playerArray.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'word-chip';
+        item.style.padding = '8px 10px';
+        item.style.fontSize = '0.9rem';
+
+        const isMe = p.id === multiplayerService.currentPlayerId;
+        const hostBadge = p.isHost ? '👑 HOST' : 'PLAYER';
+        
+        item.innerHTML = `
+            <span>${p.isHost ? '👑 ' : '🎮 '}<strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold);">(YOU)</small>' : ''}</span>
+            <span class="chip-len" style="font-size:0.75rem; padding:2px 6px;">
+                ⏱️${p.timeHandicap || 30}s | ⭐${p.scoreMultiplier || 1.0}x
+            </span>
+        `;
+        playerListEl.appendChild(item);
     });
 }

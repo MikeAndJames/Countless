@@ -7,6 +7,7 @@
  */
 
 import { playSound, playVictoryChime } from '../audio.js';
+import { multiplayerService } from '../multiplayer.js';
 
 let containerRef = null;
 
@@ -160,20 +161,38 @@ function attachSplashEvents(onNavigate) {
     btnCloseHost.addEventListener('click', () => hostModal.classList.add('hidden'));
     btnCloseJoin.addEventListener('click', () => joinModal.classList.add('hidden'));
 
-    btnConfirmHost.addEventListener('click', () => {
-        playVictoryChime();
-        hostModal.classList.add('hidden');
-        onNavigate('lobby');
+    btnConfirmHost.addEventListener('click', async () => {
+        const hostName = containerRef.querySelector('#hostPlayerName').value.trim() || 'Host';
+        const roomCode = containerRef.querySelector('#generatedRoomCode').textContent.trim() || 'GRAMPS80';
+
+        try {
+            await multiplayerService.createRoom(roomCode, hostName);
+            playVictoryChime();
+            hostModal.classList.add('hidden');
+            onNavigate('lobby');
+        } catch (err) {
+            alert(`Error creating room: ${err.message}`);
+        }
     });
 
-    btnConfirmJoin.addEventListener('click', () => {
-        const code = containerRef.querySelector('#joinRoomCodeInput').value.trim();
+    btnConfirmJoin.addEventListener('click', async () => {
+        const code = containerRef.querySelector('#joinRoomCodeInput').value.trim().toUpperCase();
+        const playerName = containerRef.querySelector('#joinPlayerNameInput').value.trim() || 'Player';
+        const timeHandicap = containerRef.querySelector('#joinTimeHandicap').value;
+        const scoreMultiplier = containerRef.querySelector('#joinScoreMultiplier').value;
+
         if (!code) {
             alert("Please enter a valid Room Code (e.g. GRAMPS80)!");
             return;
         }
-        playVictoryChime();
-        joinModal.classList.add('hidden');
-        onNavigate('lobby');
+
+        try {
+            await multiplayerService.joinRoom(code, playerName, timeHandicap, scoreMultiplier);
+            playVictoryChime();
+            joinModal.classList.add('hidden');
+            onNavigate('lobby');
+        } catch (err) {
+            alert(`Error joining room: ${err.message}`);
+        }
     });
 }
