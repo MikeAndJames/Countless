@@ -465,11 +465,22 @@ function renderDeclaringPhaseUI() {
 
     state.savedWords.forEach((word) => {
         const btn = document.createElement('button');
-        btn.className = 'decl-btn';
+        btn.className = 'btn btn-gold btn-large decl-btn';
+        btn.style.width = '100%';
+        btn.style.display = 'flex';
+        btn.style.justifyContent = 'space-between';
+        btn.style.alignItems = 'center';
         btn.style.padding = '14px 20px';
-        btn.style.fontSize = '1.15rem';
-        btn.innerHTML = `<span>⭐ DECLARE "${word}"</span><span class="chip-len" style="font-size:0.9rem; padding:4px 10px;">${word.length} PTS</span>`;
-        btn.addEventListener('click', () => processDeclaredWord(word));
+        btn.style.fontSize = '1.2rem';
+        btn.style.cursor = 'pointer';
+        btn.style.marginBottom = '8px';
+
+        btn.innerHTML = `
+            <span style="pointer-events:none;">⭐ DECLARE "${word}"</span>
+            <span class="chip-len" style="pointer-events:none; font-size:0.9rem; padding:4px 12px; background:#0f172a; color:var(--gold); border-radius:6px;">${word.length} PTS</span>
+        `;
+
+        addTouchAndClickListener(btn, () => processDeclaredWord(word));
         declarationOptionList.appendChild(btn);
     });
 }
