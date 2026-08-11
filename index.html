@@ -11,6 +11,13 @@
     <link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
+    <!-- MOBILE FULLSCREEN OVERLAY -->
+    <div id="mobileFullscreenOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0f172a; z-index:9999; flex-direction:column; justify-content:center; align-items:center; color:white; text-align:center; padding:20px;">
+        <span style="font-size:4rem; margin-bottom:20px;">📱</span>
+        <h2 style="font-family:'Outfit', sans-serif; font-weight:900; margin-bottom:15px; font-size: 2rem;">MOBILE BROWSER DETECTED</h2>
+        <p style="font-family:'Outfit', sans-serif; font-size:1.1rem; color:#fbbf24; margin-bottom:30px; font-weight:600;">For the best experience, please play in Full Screen mode.</p>
+        <button id="btnEnterFullscreen" style="padding:15px 30px; font-size:1.2rem; font-family:'Outfit', sans-serif; font-weight:900; cursor:pointer; background:#fbbf24; color:#0f172a; border:none; border-radius:8px;">CLICK FOR FULL SCREEN</button>
+    </div>
 
     <!-- STAGE CONTAINER (CENTERED ON SCREEN) -->
     <div class="stage-container">

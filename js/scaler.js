@@ -13,7 +13,8 @@ export function initAutoScaler() {
     if (!canvas) return;
 
     function scaleGame() {
-        const targetWidth = 960;
+        // Updated to 1170x540 (19.5:9) to fit modern wide phones perfectly!
+        const targetWidth = 1170;
         const targetHeight = 540;
 
         const windowWidth = window.innerWidth;

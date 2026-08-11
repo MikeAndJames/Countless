@@ -20,6 +20,40 @@ let activeScreen = 'splash';
 
 document.addEventListener('DOMContentLoaded', () => {
     initAutoScaler();
+
+    // Check if mobile device (using simple width check or touch support)
+    const isMobile = ('ontouchstart' in window) || (window.innerWidth <= 1024);
+    
+    if (isMobile) {
+        const overlay = document.getElementById('mobileFullscreenOverlay');
+        const btnFs = document.getElementById('btnEnterFullscreen');
+        
+        if (overlay && btnFs) {
+            // Show the overlay
+            overlay.style.display = 'flex';
+            
+            btnFs.addEventListener('click', () => {
+                // Request Fullscreen on the entire document
+                const docEl = document.documentElement;
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen();
+                } else if (docEl.webkitRequestFullscreen) { // Safari
+                    docEl.webkitRequestFullscreen();
+                } else if (docEl.msRequestFullscreen) { // IE11
+                    docEl.msRequestFullscreen();
+                }
+                
+                // Hide the overlay
+                overlay.style.display = 'none';
+                
+                // Wait a tiny bit for the screen to resize, then re-scale
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('resize'));
+                }, 500);
+            });
+        }
+    }
+
     switchScreen('splash');
 });
 
