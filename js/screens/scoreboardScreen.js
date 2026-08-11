@@ -1,4 +1,5 @@
 import { multiplayerService } from '../multiplayer.js';
+import { dictionaryEngine } from '../dictionary.js';
 
 let containerRef = null;
 let onStartGameCallback = null;
@@ -75,8 +76,10 @@ function attachEvents() {
     if (btnConundrum) {
         btnConundrum.addEventListener('click', async () => {
             btnConundrum.disabled = true;
-            // The conundrumScreen generates it locally based on a target word if needed, or we just pass empty
-            await multiplayerService.broadcastRoundStart('conundrum', {});
+            
+            // Generate conundrum word on Host so all clients receive the exact same word
+            const targetWord = await dictionaryEngine.getRandom9LetterWordAsync();
+            await multiplayerService.broadcastRoundStart('conundrum', { conundrumWord: targetWord });
         });
     }
 }
