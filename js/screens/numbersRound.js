@@ -11,6 +11,7 @@
 import { playSound, playTick, playGong } from '../audio.js';
 import { CountdownClockComponent } from '../clock.js';
 import { multiplayerService } from '../multiplayer.js';
+import { switchScreen } from '../main.js';
 
 const LARGE_NUMBERS = [25, 50, 75, 100];
 const SMALL_NUMBERS = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10];
@@ -121,6 +122,8 @@ export function renderNumbersRound(container, initialGameData = null) {
         if (btnNew) btnNew.style.display = 'none';
         startNewNumbersRound(initialGameData);
     }
+    
+    subscribeToMultiplayerEvents();
 }
 
 export function cleanupNumbersRound() {
@@ -544,6 +547,17 @@ function submitNumberScore() {
         msg.textContent = 'Waiting for host to continue...';
         sidebar.appendChild(msg);
     }
+}
+
+function subscribeToMultiplayerEvents() {
+    const code = multiplayerService.currentRoomCode;
+    if (!code) return;
+
+    multiplayerService.listenToRoom(code, (roomData) => {
+        if (roomData.activeScreen === 'scoreboard') {
+            switchScreen('scoreboard');
+        }
+    });
 }
 
 function toggleAIMathSolver() {

@@ -15,6 +15,7 @@ import { playSound, playTick, playGong, playVictoryChime } from '../audio.js';
 import { CountdownClockComponent } from '../clock.js';
 import { lobbySettings } from './lobbyScreen.js';
 import { multiplayerService } from '../multiplayer.js';
+import { switchScreen } from '../main.js';
 
 // Official TV Countdown Weighted Letter Stacks (67 Vowels & 74 Consonants)
 const VOWELS = [
@@ -637,6 +638,10 @@ function subscribeToMultiplayerResults() {
     if (!code) return;
 
     multiplayerService.listenToRoom(code, (roomData) => {
+        if (roomData.activeScreen === 'scoreboard') {
+            switchScreen('scoreboard');
+            return;
+        }
         renderScoreboardItemsUI(roomData);
     });
 }
