@@ -14,6 +14,7 @@ import { dictionaryEngine } from '../dictionary.js';
 import { playSound, playTick, playGong, playVictoryChime } from '../audio.js';
 import { CountdownClockComponent } from '../clock.js';
 import { lobbySettings } from './lobbyScreen.js';
+import { multiplayerService } from '../multiplayer.js';
 
 // Official TV Countdown Weighted Letter Stacks (67 Vowels & 74 Consonants)
 const VOWELS = [
@@ -550,7 +551,10 @@ function renderResultsPhaseUI() {
                     <span class="clock-digits-val" style="font-size:2.8rem; color:var(--gold);">${score} PTS</span>
                 </div>
 
-                <button id="btnNextRound" class="btn btn-deal" style="font-size:1.15rem; padding:12px;">🎲 NEXT ROUND</button>
+                ${multiplayerService.isHost(multiplayerService.currentRoomCode ? undefined : undefined) ? 
+                `<button id="btnViewScoreboard" class="btn btn-deal" style="font-size:1rem; padding:12px;">🏆 VIEW CUMULATIVE SCOREBOARD</button>` : 
+                `<div style="text-align:center; padding:12px; color:#94a3b8; font-size:0.9rem;">Waiting for host to continue...</div>`
+                }
             </aside>
 
             <!-- MAIN CENTER BOARD: CLEAN RESULTS & MULTIPLAYER SCOREBOARD -->
@@ -722,7 +726,13 @@ async function showWordInspector(word) {
 }
 
 function attachResultsEvents() {
-    containerRef.querySelector('#btnNextRound').addEventListener('click', startNewRound);
+    const btnViewScoreboard = containerRef.querySelector('#btnViewScoreboard');
+    if (btnViewScoreboard) {
+        btnViewScoreboard.addEventListener('click', async () => {
+            playSound(600, 0.08);
+            await multiplayerService.broadcastRoundStart('scoreboard', null);
+        });
+    }
     
     const btnToggleAI = containerRef.querySelector('#btnToggleAI');
     const btnCloseAIModal = containerRef.querySelector('#btnCloseAIModal');

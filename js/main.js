@@ -14,24 +14,14 @@ import { renderLobbyScreen } from './screens/lobbyScreen.js';
 import { renderLettersRound, cleanupLettersRound } from './screens/lettersRound.js';
 import { renderNumbersRound, cleanupNumbersRound } from './screens/numbersRound.js';
 import { renderConundrumRound, cleanupConundrumRound } from './screens/conundrumRound.js';
+import { renderScoreboardScreen } from './screens/scoreboardScreen.js';
 
 let activeScreen = 'splash';
 
 document.addEventListener('DOMContentLoaded', () => {
     initAutoScaler();
-    initNavigation();
     switchScreen('splash');
 });
-
-function initNavigation() {
-    const navTabs = document.querySelectorAll('.nav-tab');
-    navTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const screenName = tab.getAttribute('data-screen');
-            switchScreen(screenName);
-        });
-    });
-}
 
 export function switchScreen(screenName, initialGameData = null) {
     // 1. Cleanup current screen
@@ -39,18 +29,14 @@ export function switchScreen(screenName, initialGameData = null) {
     else if (activeScreen === 'numbers') cleanupNumbersRound();
     else if (activeScreen === 'conundrum') cleanupConundrumRound();
 
+    // 1b. UNBIND ANY ACTIVE FIREBASE LISTENERS TO PREVENT GHOST EVENTS!
+    if (multiplayerService && multiplayerService.unsubscribeRoomListener) {
+        multiplayerService.unsubscribeRoomListener();
+        multiplayerService.unsubscribeRoomListener = null;
+    }
+
     activeScreen = screenName;
     if (multiplayerService) multiplayerService.activeScreenName = screenName;
-
-    // 2. Update navigation active highlight
-    const navTabs = document.querySelectorAll('.nav-tab');
-    navTabs.forEach(tab => {
-        if (tab.getAttribute('data-screen') === screenName) {
-            tab.classList.add('active');
-        } else {
-            tab.classList.remove('active');
-        }
-    });
 
     // 3. Render target screen into #appMount
     const appMount = document.getElementById('appMount');
@@ -66,5 +52,7 @@ export function switchScreen(screenName, initialGameData = null) {
         renderNumbersRound(appMount, initialGameData);
     } else if (screenName === 'conundrum') {
         renderConundrumRound(appMount, initialGameData);
+    } else if (screenName === 'scoreboard') {
+        renderScoreboardScreen(appMount, (targetScreen, gameData) => switchScreen(targetScreen, gameData));
     }
 }

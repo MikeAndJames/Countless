@@ -10,6 +10,7 @@
 
 import { playSound, playTick, playGong } from '../audio.js';
 import { CountdownClockComponent } from '../clock.js';
+import { multiplayerService } from '../multiplayer.js';
 
 const LARGE_NUMBERS = [25, 50, 75, 100];
 const SMALL_NUMBERS = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10];
@@ -113,7 +114,13 @@ export function renderNumbersRound(container, initialGameData = null) {
     `;
 
     attachEvents();
-    startNewNumbersRound(initialGameData);
+    
+    // If launched via multiplayer host, hide manual deal button and auto-start
+    if (initialGameData) {
+        const btnNew = container.querySelector('#btnNewNumbersRound');
+        if (btnNew) btnNew.style.display = 'none';
+        startNewNumbersRound(initialGameData);
+    }
 }
 
 export function cleanupNumbersRound() {
@@ -504,6 +511,39 @@ function submitNumberScore() {
     title.textContent = titleText;
     scoreEl.textContent = `${score} PTS`;
     diffEl.textContent = `Target: ${state.targetNumber} | Your Closest: ${closestTile.val} (Difference: ${minDiff})`;
+
+    // Submit multiplayer score
+    if (multiplayerService.currentRoomCode) {
+        multiplayerService.submitRoundResult({
+            score: score,
+            isValid: true // Math is always valid if calculated by the game
+        }).catch(e => console.warn("Submitting numbers result:", e));
+    }
+
+    // Show View Scoreboard button for Host
+    const sidebar = containerRef.querySelector('.sidebar-card');
+    if (sidebar && !sidebar.querySelector('#btnViewScoreboard') && multiplayerService.isHost()) {
+        const btn = document.createElement('button');
+        btn.id = 'btnViewScoreboard';
+        btn.className = 'btn btn-deal';
+        btn.style.marginTop = '10px';
+        btn.style.padding = '12px';
+        btn.innerHTML = '🏆 VIEW CUMULATIVE SCOREBOARD';
+        btn.onclick = async () => {
+            playSound(600, 0.08);
+            await multiplayerService.broadcastRoundStart('scoreboard', null);
+        };
+        sidebar.appendChild(btn);
+    } else if (sidebar && !sidebar.querySelector('#btnWaitHost') && !multiplayerService.isHost() && multiplayerService.currentRoomCode) {
+        const msg = document.createElement('div');
+        msg.id = 'btnWaitHost';
+        msg.style.textAlign = 'center';
+        msg.style.marginTop = '10px';
+        msg.style.color = '#94a3b8';
+        msg.style.fontSize = '0.9rem';
+        msg.textContent = 'Waiting for host to continue...';
+        sidebar.appendChild(msg);
+    }
 }
 
 function toggleAIMathSolver() {

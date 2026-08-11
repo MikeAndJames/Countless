@@ -54,7 +54,8 @@ export class MultiplayerService {
     async createRoom(roomCode, hostName) {
         const cleanCode = roomCode.trim().toUpperCase();
         this.currentRoomCode = cleanCode;
-        this.currentPlayerId = `p_host_${Date.now()}`;
+        this.currentPlayerId = `p_${Date.now()}`;
+        this.isLocalHost = true;
 
         const roomRef = ref(db, `rooms/${cleanCode}`);
         const roomData = {
@@ -100,6 +101,7 @@ export class MultiplayerService {
 
         this.currentRoomCode = cleanCode;
         this.currentPlayerId = `p_${Date.now()}`;
+        this.isLocalHost = false;
 
         const playerRef = ref(db, `rooms/${cleanCode}/players/${this.currentPlayerId}`);
         const playerData = {
@@ -124,6 +126,12 @@ export class MultiplayerService {
         const cleanCode = roomCode.trim().toUpperCase();
         const roomRef = ref(db, `rooms/${cleanCode}`);
 
+        // UNBIND PREVIOUS LISTENER IF ONE EXISTS
+        if (this.unsubscribeRoomListener) {
+            this.unsubscribeRoomListener();
+            this.unsubscribeRoomListener = null;
+        }
+
         // Attach Firebase Realtime Listener
         const unsubscribe = onValue(roomRef, (snapshot) => {
             if (snapshot.exists()) {
@@ -138,10 +146,13 @@ export class MultiplayerService {
     /**
      * 4. CHECK IF CURRENT PLAYER IS HOST
      */
-    isHost(playersObj) {
-        if (!this.currentPlayerId || !playersObj) return false;
-        const player = playersObj[this.currentPlayerId];
-        return player ? Boolean(player.isHost) : false;
+    isHost(playersObj = null) {
+        if (playersObj) {
+            if (!this.currentPlayerId) return false;
+            const player = playersObj[this.currentPlayerId];
+            return player ? Boolean(player.isHost) : false;
+        }
+        return Boolean(this.isLocalHost);
     }
 
     /**
@@ -175,10 +186,36 @@ export class MultiplayerService {
      */
     async submitRoundResult(submissionData) {
         if (!this.currentRoomCode || !this.currentPlayerId) return;
+        
+        // 1. Get current player data to read multiplier and cumulative score
+        const playerRef = ref(db, `rooms/${this.currentRoomCode}/players/${this.currentPlayerId}`);
+        const playerSnap = await get(playerRef);
+        
+        let multiplier = 1.0;
+        let currentTotal = 0;
+        
+        if (playerSnap.exists()) {
+            const pData = playerSnap.val();
+            multiplier = pData.scoreMultiplier || 1.0;
+            currentTotal = pData.score || 0;
+        }
+
+        // 2. Apply multiplier and round to integer
+        const rawScore = submissionData.score || 0;
+        const adjustedScore = Math.round(rawScore * multiplier);
+
+        // 3. Update the cumulative score in the player's node
+        await update(playerRef, {
+            score: currentTotal + adjustedScore
+        });
+
+        // 4. Submit the round result (with adjusted score for the scoreboard)
         const subRef = ref(db, `rooms/${this.currentRoomCode}/roundResults/${this.currentPlayerId}`);
         await set(subRef, {
             id: this.currentPlayerId,
             ...submissionData,
+            score: adjustedScore,
+            baseScore: rawScore,
             submittedAt: Date.now()
         });
     }
