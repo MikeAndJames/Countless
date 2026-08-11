@@ -119,6 +119,7 @@ function handleRoomUpdate(roomData) {
             containerRef.querySelector('#buzzSection').classList.add('hidden');
             containerRef.querySelector('#conundrumActions').classList.remove('hidden');
             attachKeyboardListener();
+            renderTilesUI(); // RE-RENDER SO TILES BECOME CLICKABLE!
         } else {
             // Someone else buzzed! I just watch.
             state.isBuzzed = false;
