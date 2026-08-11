@@ -166,6 +166,19 @@ export class MultiplayerService {
         const roomRef = ref(db, `rooms/${this.currentRoomCode}`);
         await update(roomRef, updates);
     }
+
+    /**
+     * 7. SUBMIT PLAYER ROUND RESULT TO FIREBASE
+     */
+    async submitRoundResult(submissionData) {
+        if (!this.currentRoomCode || !this.currentPlayerId) return;
+        const subRef = ref(db, `rooms/${this.currentRoomCode}/roundResults/${this.currentPlayerId}`);
+        await set(subRef, {
+            id: this.currentPlayerId,
+            ...submissionData,
+            submittedAt: Date.now()
+        });
+    }
 }
 
 // Global Singleton Instance

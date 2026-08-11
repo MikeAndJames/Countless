@@ -87,12 +87,54 @@ export class CountdownDictionaryEngine {
     /**
      * Synchronous definition getter
      */
+    /**
+     * Clean and format definition text into a concise 1-2 sentence definition (max 180 chars)
+     */
+    cleanDefinition(rawDef) {
+        if (!rawDef) return "";
+        let text = rawDef.trim();
+        
+        // Remove archaic brackets like [Obs.] or [Naut.] or [1913 Webster]
+        text = text.replace(/\[[^\]]*\]/g, '').trim();
+        
+        // If definition has numbered senses like "1. To long for... 2. To express...", keep only first 2 senses!
+        const senses = text.split(/(?=\b[1-9]\.\s)/);
+        if (senses.length > 1) {
+            text = senses.slice(0, 2).join(' ').trim();
+        }
+
+        // Limit maximum length to ~180 characters for clean UI presentation
+        if (text.length > 180) {
+            const cut = text.substring(0, 175);
+            const lastPeriod = cut.lastIndexOf('.');
+            if (lastPeriod > 60) {
+                text = cut.substring(0, lastPeriod + 1);
+            } else {
+                text = cut.trim() + '...';
+            }
+        }
+        return text;
+    }
+
     getDefinition(word) {
         const cleanWord = word.trim().toUpperCase();
         if (this.dictionaryMap.has(cleanWord)) {
-            return this.dictionaryMap.get(cleanWord);
+            const raw = this.dictionaryMap.get(cleanWord);
+            if (!raw.startsWith("Valid ")) {
+                return this.cleanDefinition(raw);
+            }
         }
-        return `A valid ${cleanWord.length}-letter word in the English dictionary.`;
+        // Plural stem check (e.g. CRIMES -> CRIME, GAMES -> GAME)
+        if (cleanWord.endsWith('S') && cleanWord.length > 3) {
+            const singular = cleanWord.endsWith('ES') ? cleanWord.slice(0, -2) : cleanWord.slice(0, -1);
+            if (this.dictionaryMap.has(singular)) {
+                const sRaw = this.dictionaryMap.get(singular);
+                if (!sRaw.startsWith("Valid ")) {
+                    return `(Plural of ${singular}) ${this.cleanDefinition(sRaw)}`;
+                }
+            }
+        }
+        return `A valid ${cleanWord.length}-letter word in the official English dictionary.`;
     }
 
     /**
@@ -106,18 +148,31 @@ export class CountdownDictionaryEngine {
         if (this.dictionaryMap.has(cleanWord)) {
             const localDef = this.dictionaryMap.get(cleanWord);
             if (localDef && !localDef.startsWith("Valid ")) {
-                return localDef;
+                return this.cleanDefinition(localDef);
             }
         }
 
-        // 2. Fetch real definition from internet API
-        const challenge = await this.challengeWordOnlineAsync(cleanWord);
-        if (challenge.valid && challenge.definition && !challenge.definition.startsWith("Valid ")) {
-            return challenge.definition;
+        // 2. Check plural stem in local database (e.g. CRIMES -> CRIME)
+        if (cleanWord.endsWith('S') && cleanWord.length > 3) {
+            const singular = cleanWord.endsWith('ES') ? cleanWord.slice(0, -2) : cleanWord.slice(0, -1);
+            if (this.dictionaryMap.has(singular)) {
+                const sDef = this.dictionaryMap.get(singular);
+                if (sDef && !sDef.startsWith("Valid ")) {
+                    return `(Plural of ${singular}) ${this.cleanDefinition(sDef)}`;
+                }
+            }
         }
 
-        // 3. Simple peace-keeping fallback if internet times out!
-        return `🌐 Internet timed out — "${cleanWord}" is a valid word in the dictionary, but the full online definition could not be fetched right now.`;
+        // 3. Fetch real definition from internet API
+        try {
+            const challenge = await this.challengeWordOnlineAsync(cleanWord);
+            if (challenge.valid && challenge.definition && !challenge.definition.startsWith("Valid ")) {
+                return this.cleanDefinition(challenge.definition);
+            }
+        } catch(e) {}
+
+        // 4. Clean concise fallback
+        return `"${cleanWord}" is a valid ${cleanWord.length}-letter word in the official English dictionary.`;
     }
 
     /**

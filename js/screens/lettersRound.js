@@ -492,6 +492,18 @@ async function processDeclaredWord(word) {
         challengeResult: null
     };
 
+    if (multiplayerService.currentRoomCode) {
+        try {
+            await multiplayerService.submitRoundResult({
+                word: word || 'NO WORD',
+                score: score,
+                isValid: isValid
+            });
+        } catch(e) {
+            console.warn("Submitting round result:", e);
+        }
+    }
+
     if (isValid) playVictoryChime();
     else playSound(220, 0.3);
 
@@ -523,40 +535,52 @@ function renderResultsPhaseUI() {
                 </div>
 
                 <div class="sidebar-timer-box">
-                    <span class="timer-label">SCORE</span>
+                    <span class="timer-label">YOUR SCORE</span>
                     <span class="clock-digits-val" style="font-size:2.8rem; color:var(--gold);">${score} PTS</span>
                 </div>
 
                 <button id="btnNextRound" class="btn btn-deal" style="font-size:1.15rem; padding:12px;">🎲 NEXT ROUND</button>
             </aside>
 
-            <!-- MAIN CENTER BOARD: CLEAN RESULTS & CHALLENGE SCREEN -->
+            <!-- MAIN CENTER BOARD: CLEAN RESULTS & MULTIPLAYER SCOREBOARD -->
             <main class="center-board" style="justify-content:space-between; gap:10px;">
                 <!-- RESULT CARD -->
-                <div class="result-card ${isValid ? '' : 'invalid'}" style="flex:1; display:flex; flex-direction:column; justify-content:space-around; padding:16px;">
+                <div class="result-card ${isValid ? '' : 'invalid'}" style="flex:1; display:flex; flex-direction:column; justify-content:space-around; padding:14px;">
                     <div class="result-header">
-                        <h2 style="font-size:1.4rem; color:${isValid ? 'var(--success-green)' : 'var(--danger-red)'};">
+                        <h2 style="font-size:1.3rem; color:${isValid ? 'var(--success-green)' : 'var(--danger-red)'}; margin:0;">
                             ${word ? (isValid ? `DECLARED WORD: "${word}"` : `INVALID: "${word}"`) : 'NO WORD DECLARED'}
                         </h2>
-                        <div class="score-pill" style="font-size:1.2rem; padding:4px 14px;">${score} PTS</div>
+                        <div class="score-pill" style="font-size:1.1rem; padding:4px 12px;">${score} PTS</div>
                     </div>
 
                     <div id="challengeStatusArea">
                         ${!isValid && word ? `
-                            <div style="margin-top:10px;">
-                                <button id="btnChallengeWord" class="btn btn-deal" style="width:100%; font-size:1rem; padding:10px;">
+                            <div style="margin-top:6px;">
+                                <button id="btnChallengeWord" class="btn btn-deal" style="width:100%; font-size:0.95rem; padding:8px;">
                                     🚨 CHALLENGE WORD "${word}" (CHECK ONLINE DICTIONARY)
                                 </button>
                             </div>
                         ` : ''}
                     </div>
 
-                    <p class="result-def" style="font-size:0.95rem; line-height:1.4; color:#cbd5e1;">
+                    <p class="result-def" style="font-size:0.9rem; line-height:1.4; color:#cbd5e1; margin:6px 0;">
                         <strong>Definition:</strong> ${definition}
                     </p>
 
                     <div id="aiBannerContainer">
                         ${aiBannerHtml}
+                    </div>
+                </div>
+
+                <!-- MULTIPLAYER ROUND SCOREBOARD -->
+                <div class="result-card" style="flex:1; display:flex; flex-direction:column; padding:12px; border:2px solid var(--gold);">
+                    <h3 style="color:var(--gold); font-size:1.1rem; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🏆 MULTIPLAYER ROUND SCOREBOARD</span>
+                        <small style="color:#94a3b8; font-size:0.75rem;">Tap any word for definition</small>
+                    </h3>
+
+                    <div id="resultsMultiplayerBoard" style="display:flex; flex-direction:column; gap:6px; flex:1; overflow-y:auto;">
+                        <div style="color:#94a3b8; font-size:0.85rem;">Waiting for player submissions...</div>
                     </div>
                 </div>
 
@@ -568,10 +592,21 @@ function renderResultsPhaseUI() {
                 <div id="aiResults" class="modal-overlay hidden">
                     <div class="modal-content">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3 class="modal-title">💡 TOP MAX AI SOLVER WORDS</h3>
+                            <h3 class="modal-title">💡 TOP MAX AI SOLVER WORDS (TAP FOR DEFINITION)</h3>
                             <button id="btnCloseAIModal" class="btn btn-secondary" style="padding:2px 8px;">❌ CLOSE</button>
                         </div>
                         <ul id="aiList" class="ai-list"></ul>
+                    </div>
+                </div>
+
+                <!-- WORD DEFINITION INSPECTOR MODAL -->
+                <div id="wordInspectorModal" class="modal-overlay hidden">
+                    <div class="modal-content splash-modal" style="max-width:500px; text-align:left;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--gold); padding-bottom:6px; margin-bottom:10px;">
+                            <h3 id="inspectorWordTitle" style="color:var(--gold); font-size:1.4rem; margin:0;">📖 WORD</h3>
+                            <button id="btnCloseInspectorModal" class="btn btn-secondary" style="padding:2px 8px;">❌</button>
+                        </div>
+                        <p id="inspectorWordDef" style="font-size:1rem; color:#ffffff; line-height:1.5; margin:0;"></p>
                     </div>
                 </div>
             </main>
@@ -579,6 +614,100 @@ function renderResultsPhaseUI() {
     `;
 
     attachResultsEvents();
+    subscribeToMultiplayerResults();
+}
+
+function subscribeToMultiplayerResults() {
+    const code = multiplayerService.currentRoomCode;
+    if (!code) return;
+
+    multiplayerService.listenToRoom(code, (roomData) => {
+        renderScoreboardItemsUI(roomData);
+    });
+}
+
+function renderScoreboardItemsUI(roomData) {
+    const boardEl = containerRef ? containerRef.querySelector('#resultsMultiplayerBoard') : null;
+    if (!boardEl || !roomData) return;
+
+    boardEl.innerHTML = '';
+    const players = roomData.players || {};
+    const results = roomData.roundResults || {};
+
+    Object.values(players).forEach(p => {
+        const res = results[p.id] || { word: '...', score: 0 };
+        const isMe = p.id === multiplayerService.currentPlayerId;
+
+        const row = document.createElement('div');
+        row.className = 'word-chip';
+        row.style.display = 'flex';
+        row.style.justifySpaceBetween = 'space-between';
+        row.style.alignItems = 'center';
+        row.style.padding = '8px 12px';
+        row.style.cursor = 'pointer';
+
+        row.innerHTML = `
+            <div>
+                <span>${p.isHost ? '👑 ' : '🎮 '}<strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold);">(YOU)</small>' : ''}:</span>
+                <strong style="color:var(--gold); font-size:1rem; margin-left:6px;">"${res.word}"</strong>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="chip-len" style="font-weight:900;">${res.score} PTS</span>
+                <span style="font-size:0.8rem; color:var(--cyan);">🔍 DEF</span>
+            </div>
+        `;
+
+        if (res.word && res.word !== '...') {
+            row.addEventListener('click', () => showWordInspector(res.word));
+        }
+        boardEl.appendChild(row);
+    });
+
+    // Also append AI Best Word to Scoreboard
+    if (state.declaredResult && state.declaredResult.aiBest) {
+        const aiWord = state.declaredResult.aiBest.word;
+        const aiScore = (aiWord.length === 9) ? 18 : aiWord.length;
+
+        const aiRow = document.createElement('div');
+        aiRow.className = 'word-chip';
+        aiRow.style.background = 'rgba(59,130,246,0.2)';
+        aiRow.style.border = '1px solid #3b82f6';
+        aiRow.style.padding = '8px 12px';
+        aiRow.style.cursor = 'pointer';
+
+        aiRow.innerHTML = `
+            <div>
+                <span>🤖 <strong>AI MAX BEST</strong>:</span>
+                <strong style="color:#93c5fd; font-size:1rem; margin-left:6px;">"${aiWord}"</strong>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="chip-len" style="background:#3b82f6; color:#ffffff;">${aiScore} PTS</span>
+                <span style="font-size:0.8rem; color:var(--cyan);">🔍 DEF</span>
+            </div>
+        `;
+        aiRow.addEventListener('click', () => showWordInspector(aiWord));
+        boardEl.appendChild(aiRow);
+    }
+}
+
+async function showWordInspector(word) {
+    if (!word || !containerRef) return;
+    const cleanWord = word.trim().toUpperCase();
+    const modal = containerRef.querySelector('#wordInspectorModal');
+    const titleEl = containerRef.querySelector('#inspectorWordTitle');
+    const defEl = containerRef.querySelector('#inspectorWordDef');
+    const btnClose = containerRef.querySelector('#btnCloseInspectorModal');
+
+    if (!modal || !titleEl || !defEl) return;
+
+    titleEl.textContent = `📖 "${cleanWord}"`;
+    defEl.textContent = "⏳ Fetching dictionary definition...";
+    modal.classList.remove('hidden');
+
+    const def = await dictionaryEngine.getDefinitionAsync(cleanWord);
+    defEl.textContent = def;
+
+    if (btnClose) btnClose.onclick = () => modal.classList.add('hidden');
 }
 
 function attachResultsEvents() {
@@ -676,13 +805,19 @@ function toggleAISolver() {
             bestWords.slice(0, 8).forEach(item => {
                 const li = document.createElement('li');
                 li.className = 'ai-item';
+                li.style.cursor = 'pointer';
+                const cleanDefText = dictionaryEngine.cleanDefinition(item.definition);
                 li.innerHTML = `
                     <div class="ai-item-head">
-                        <span>${item.word}</span>
-                        <span style="color:var(--gold);">${item.length} PTS</span>
+                        <span style="font-weight:900;">${item.word} <small style="color:var(--cyan); font-weight:normal;">(Tap to view def)</small></span>
+                        <span style="color:var(--gold); font-weight:900;">${item.length} PTS</span>
                     </div>
-                    <div class="ai-item-def">${item.definition}</div>
+                    <div class="ai-item-def">${cleanDefText}</div>
                 `;
+                li.addEventListener('click', () => {
+                    aiResults.classList.add('hidden');
+                    showWordInspector(item.word);
+                });
                 aiList.appendChild(li);
             });
         }
