@@ -67,7 +67,8 @@ export class MultiplayerService {
                     id: this.currentPlayerId,
                     name: hostName,
                     isHost: true,
-                    handicap: "1.0x",
+                    timeHandicap: 30, // 20s, 30s (default), 45s, 60s
+                    scoreMultiplier: 1.0, // 1.0x, 1.25x, 1.5x
                     score: 0
                 }
             },
@@ -87,7 +88,7 @@ export class MultiplayerService {
     /**
      * 2. JOIN AN EXISTING ROOM (Player Action)
      */
-    async joinRoom(roomCode, playerName, handicap = "1.25x") {
+    async joinRoom(roomCode, playerName, timeHandicap = 30, scoreMultiplier = 1.25) {
         const cleanCode = roomCode.trim().toUpperCase();
         const roomRef = ref(db, `rooms/${cleanCode}`);
         const snapshot = await get(roomRef);
@@ -104,7 +105,8 @@ export class MultiplayerService {
             id: this.currentPlayerId,
             name: playerName,
             isHost: false,
-            handicap: handicap,
+            timeHandicap: Number(timeHandicap) || 30,     // 20, 30 (default), 45, 60 seconds
+            scoreMultiplier: Number(scoreMultiplier) || 1.25, // 1.0x, 1.25x, 1.5x
             score: 0
         };
 

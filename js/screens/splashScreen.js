@@ -98,6 +98,25 @@ export function renderSplashScreen(container, onNavigate) {
                             <label style="font-size:0.85rem; color:#94a3b8; font-weight:800;">YOUR NAME:</label>
                             <input type="text" id="joinPlayerNameInput" class="styled-input" placeholder="e.g. Gramps" style="padding:8px 12px; font-weight:800; font-size:1rem; border-radius:8px; border:2px solid var(--gold); background:#0f172a; color:#ffffff;" />
                         </div>
+
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <label style="font-size:0.85rem; color:#94a3b8; font-weight:800;">⏱️ YOUR CLOCK HANDICAP:</label>
+                            <select id="joinTimeHandicap" class="styled-select" style="padding:8px; font-size:0.95rem; border-radius:8px; border:2px solid var(--gold); background:#0f172a; color:#ffffff; font-weight:800;">
+                                <option value="20">20 Seconds (Pro / Blitz)</option>
+                                <option value="30" selected>30 Seconds (Default TV Clock)</option>
+                                <option value="45">45 Seconds (Relaxed Family)</option>
+                                <option value="60">60 Seconds (👑 Grandad Special)</option>
+                            </select>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <label style="font-size:0.85rem; color:#94a3b8; font-weight:800;">⭐ YOUR SCORE MULTIPLIER:</label>
+                            <select id="joinScoreMultiplier" class="styled-select" style="padding:8px; font-size:0.95rem; border-radius:8px; border:2px solid var(--gold); background:#0f172a; color:#ffffff; font-weight:800;">
+                                <option value="1.0">1.0x (Standard Points)</option>
+                                <option value="1.25">1.25x (+25% Bonus Points)</option>
+                                <option value="1.5">1.5x (👑 Grandad Special - +50% Bonus)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <button id="btnConfirmJoin" class="btn btn-submit" style="font-size:1.1rem; padding:12px; margin-top:8px;">🎮 ENTER MULTIPLAYER LOBBY</button>
