@@ -476,7 +476,7 @@ function renderDeclaringPhaseUI() {
 
 async function processDeclaredWord(word) {
     const isValid = dictionaryEngine.isValidWord(word);
-    const definition = await dictionaryEngine.getDefinitionAsync(word);
+    const definition = dictionaryEngine.getDefinition(word);
     let score = isValid ? ((word.length === 9) ? 18 : word.length) : 0;
 
     const bestWords = dictionaryEngine.findBestWords(state.allDrawnLetters);
