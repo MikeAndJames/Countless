@@ -196,7 +196,6 @@ function renderPickingPhaseUI() {
                 <div class="actions-row">
                     <button id="btnClear" class="btn btn-secondary">❌ CLEAR</button>
                     <button id="btnSaveWord" class="btn btn-save">➕ SAVE WORD TO NOTEPAD</button>
-                    <button id="btnDeclareNow" class="btn btn-gold" style="font-weight:900;">✅ DECLARE WORD NOW</button>
                 </div>
             </main>
         </div>
@@ -212,23 +211,6 @@ function attachPickingEvents() {
     containerRef.querySelector('#btnShuffle').addEventListener('click', shuffleTopLetters);
     containerRef.querySelector('#btnClear').addEventListener('click', clearWordRack);
     containerRef.querySelector('#btnSaveWord').addEventListener('click', saveCurrentWordToNotepad);
-    
-    const btnDeclareNow = containerRef.querySelector('#btnDeclareNow');
-    if (btnDeclareNow) {
-        btnDeclareNow.addEventListener('click', () => {
-            // Auto-save current rack if non-empty
-            const rackChars = state.bottomRack.filter(item => item !== null).map(item => item.char);
-            if (rackChars.length > 0) {
-                const rackWord = rackChars.join('');
-                if (!state.savedWords.includes(rackWord)) {
-                    state.savedWords.push(rackWord);
-                }
-            }
-            stopTimer();
-            state.currentPhase = 'declaring';
-            renderPhaseUI();
-        });
-    }
 }
 
 function addTouchAndClickListener(element, handler) {
@@ -390,7 +372,7 @@ function resetAndStartTimer() {
     const clockMount = containerRef.querySelector('#clockMount');
     if (!clockMount) return;
 
-    state.maxTime = (multiplayerService && multiplayerService.timeHandicap) ? Number(multiplayerService.timeHandicap) : 30;
+    state.maxTime = 30;
     state.clockComp = new CountdownClockComponent(clockMount, state.maxTime);
     state.remainingSeconds = state.maxTime;
     state.clockComp.update(0);
@@ -462,32 +444,12 @@ function renderDeclaringPhaseUI() {
                     <div style="flex:1; min-height:0; overflow-y:auto; padding-right:6px; border:1px solid #334155; background:#0f172a; border-radius:12px; padding:10px;">
                         <div id="declarationOptionList" class="declaration-options" style="gap:8px;"></div>
                     </div>
-
-                    <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
-                        <input type="text" id="manualDeclInput" class="styled-input" placeholder="TYPE ANY WORD (e.g. CRIMES)..." style="flex:1; font-weight:900; text-transform:uppercase; border:2px solid var(--gold); background:#0f172a; color:#ffffff; padding:10px;" />
-                        <button id="btnSubmitManualDecl" class="btn btn-gold" style="padding:10px 16px; font-weight:900; white-space:nowrap;">⭐ DECLARE WORD</button>
-                    </div>
                 </div>
             </main>
         </div>
     `;
 
     containerRef.querySelector('#btnNewRoundDecl').addEventListener('click', startNewRound);
-
-    const manualInput = containerRef.querySelector('#manualDeclInput');
-    const btnSubmitManual = containerRef.querySelector('#btnSubmitManualDecl');
-    if (btnSubmitManual && manualInput) {
-        btnSubmitManual.addEventListener('click', () => {
-            const word = manualInput.value.trim().toUpperCase();
-            if (word) processDeclaredWord(word);
-        });
-        manualInput.addEventListener('keydown', (e) => {
-            if (e.key === 'ENTER') {
-                const word = manualInput.value.trim().toUpperCase();
-                if (word) processDeclaredWord(word);
-            }
-        });
-    }
 
     const declarationOptionList = containerRef.querySelector('#declarationOptionList');
     declarationOptionList.innerHTML = '';
