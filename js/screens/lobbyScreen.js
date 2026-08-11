@@ -95,12 +95,9 @@ function subscribeToRoomUpdates() {
         const isHost = multiplayerService.isHost(roomData.players);
         renderControlsUI(isHost);
 
-        // 3. AUTO-LAUNCH ROUND IF HOST BROADCASTED NEW ROUND LAUNCH!
+        // 3. AUTO-LAUNCH ROUND FOR ANY DEVICE CURRENTLY IN THE LOBBY!
         if (roomData.status === 'playing' && roomData.activeScreen && onStartGameCallback) {
-            if (multiplayerService.activeScreenName !== roomData.activeScreen) {
-                multiplayerService.activeScreenName = roomData.activeScreen;
-                onStartGameCallback(roomData.activeScreen, roomData.gameData);
-            }
+            onStartGameCallback(roomData.activeScreen, roomData.gameData);
         }
     });
 }
