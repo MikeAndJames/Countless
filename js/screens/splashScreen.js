@@ -165,6 +165,11 @@ function attachSplashEvents(onNavigate) {
         const hostName = containerRef.querySelector('#hostPlayerName').value.trim() || 'Host';
         const roomCode = containerRef.querySelector('#generatedRoomCode').textContent.trim() || 'GRAMPS80';
 
+        // PREVENT DOUBLE-CLICKS (Input Lag Fix)
+        btnConfirmHost.disabled = true;
+        const originalText = btnConfirmHost.textContent;
+        btnConfirmHost.textContent = "⏳ CREATING...";
+
         try {
             await multiplayerService.createRoom(roomCode, hostName);
             playVictoryChime();
@@ -172,6 +177,8 @@ function attachSplashEvents(onNavigate) {
             onNavigate('lobby');
         } catch (err) {
             alert(`Error creating room: ${err.message}`);
+            btnConfirmHost.disabled = false;
+            btnConfirmHost.textContent = originalText;
         }
     });
 
@@ -186,6 +193,11 @@ function attachSplashEvents(onNavigate) {
             return;
         }
 
+        // PREVENT DOUBLE-CLICKS (Input Lag Fix)
+        btnConfirmJoin.disabled = true;
+        const originalText = btnConfirmJoin.textContent;
+        btnConfirmJoin.textContent = "⏳ JOINING...";
+
         try {
             await multiplayerService.joinRoom(code, playerName, timeHandicap, scoreMultiplier);
             playVictoryChime();
@@ -193,6 +205,9 @@ function attachSplashEvents(onNavigate) {
             onNavigate('lobby');
         } catch (err) {
             alert(`Error joining room: ${err.message}`);
+            // If it failed, re-enable so they can try again
+            btnConfirmJoin.disabled = false;
+            btnConfirmJoin.textContent = originalText;
         }
     });
 }
