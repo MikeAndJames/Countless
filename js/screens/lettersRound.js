@@ -403,11 +403,13 @@ function renderDeclaringPhaseUI() {
             </aside>
 
             <!-- MAIN CENTER BOARD: DECLARATION SCREEN -->
-            <main class="center-board" style="justify-content:center; align-items:center; padding:20px;">
-                <div class="lobby-card" style="width:100%; max-width:650px; text-align:center;">
-                    <h2 style="color:var(--gold); font-size:1.5rem; margin-bottom:12px;">⏰ TIME'S UP! SELECT YOUR DECLARED WORD:</h2>
+            <main class="center-board" style="justify-content:center; align-items:center; padding:16px;">
+                <div class="lobby-card" style="width:100%; max-width:650px; text-align:center; display:flex; flex-direction:column; max-height:440px;">
+                    <h2 style="color:var(--gold); font-size:1.4rem; margin-bottom:10px; flex-shrink:0;">⏰ TIME'S UP! SELECT YOUR DECLARED WORD:</h2>
                     
-                    <div id="declarationOptionList" class="declaration-options" style="gap:10px;"></div>
+                    <div style="flex:1; min-height:0; overflow-y:auto; padding-right:6px; border:1px solid #334155; background:#0f172a; border-radius:12px; padding:10px;">
+                        <div id="declarationOptionList" class="declaration-options" style="gap:8px;"></div>
+                    </div>
                 </div>
             </main>
         </div>

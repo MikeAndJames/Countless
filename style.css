@@ -529,10 +529,33 @@ html, body {
     overflow-y: auto;
 }
 
+/* SLEEK CUSTOM SCROLLBARS */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0f172a;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gold);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #fde047;
+}
+
 .saved-words-chips {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    max-height: 155px;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .word-chip {
