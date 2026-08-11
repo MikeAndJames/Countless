@@ -44,6 +44,7 @@ export class MultiplayerService {
     constructor() {
         this.currentRoomCode = null;
         this.currentPlayerId = null;
+        this.activeScreenName = null;
         this.unsubscribeRoomListener = null;
     }
 
@@ -149,11 +150,13 @@ export class MultiplayerService {
      */
     async broadcastRoundStart(roundType, gameData) {
         if (!this.currentRoomCode) return;
+        this.activeScreenName = roundType;
         const roomRef = ref(db, `rooms/${this.currentRoomCode}`);
         await update(roomRef, {
             status: "playing",
             activeScreen: roundType,
             gameData: gameData,
+            roundResults: null, // Clear previous round results for fresh round!
             lastUpdated: Date.now()
         });
     }

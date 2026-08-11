@@ -95,9 +95,12 @@ function subscribeToRoomUpdates() {
         const isHost = multiplayerService.isHost(roomData.players);
         renderControlsUI(isHost);
 
-        // 3. AUTO-LAUNCH ROUND IF HOST BROADCASTED 'playing' STATUS!
+        // 3. AUTO-LAUNCH ROUND IF HOST BROADCASTED NEW ROUND LAUNCH!
         if (roomData.status === 'playing' && roomData.activeScreen && onStartGameCallback) {
-            onStartGameCallback(roomData.activeScreen, roomData.gameData);
+            if (multiplayerService.activeScreenName !== roomData.activeScreen) {
+                multiplayerService.activeScreenName = roomData.activeScreen;
+                onStartGameCallback(roomData.activeScreen, roomData.gameData);
+            }
         }
     });
 }

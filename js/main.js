@@ -39,6 +39,7 @@ export function switchScreen(screenName, initialGameData = null) {
     else if (activeScreen === 'conundrum') cleanupConundrumRound();
 
     activeScreen = screenName;
+    if (multiplayerService) multiplayerService.activeScreenName = screenName;
 
     // 2. Update navigation active highlight
     const navTabs = document.querySelectorAll('.nav-tab');
