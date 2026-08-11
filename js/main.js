@@ -8,6 +8,7 @@
  */
 
 import { initAutoScaler } from './scaler.js';
+import { multiplayerService } from './multiplayer.js';
 import { renderSplashScreen } from './screens/splashScreen.js';
 import { renderLobbyScreen } from './screens/lobbyScreen.js';
 import { renderLettersRound, cleanupLettersRound } from './screens/lettersRound.js';
