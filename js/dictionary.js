@@ -102,24 +102,22 @@ export class CountdownDictionaryEngine {
         if (!word) return "";
         const cleanWord = word.trim().toUpperCase();
         
+        // 1. Check local database for detailed definition
         if (this.dictionaryMap.has(cleanWord)) {
-            const cachedDef = this.dictionaryMap.get(cleanWord);
-            if (cachedDef && !cachedDef.startsWith("Valid ")) {
-                return cachedDef;
+            const localDef = this.dictionaryMap.get(cleanWord);
+            if (localDef && !localDef.startsWith("Valid ")) {
+                return localDef;
             }
         }
 
+        // 2. Fetch real definition from internet API
         const challenge = await this.challengeWordOnlineAsync(cleanWord);
-        if (challenge.valid && challenge.definition) {
-            this.dictionaryMap.set(cleanWord, challenge.definition);
+        if (challenge.valid && challenge.definition && !challenge.definition.startsWith("Valid ")) {
             return challenge.definition;
         }
 
-        if (this.dictionaryMap.has(cleanWord)) {
-            return this.dictionaryMap.get(cleanWord);
-        }
-
-        return `A valid ${cleanWord.length}-letter word in the English dictionary.`;
+        // 3. Simple peace-keeping fallback if internet times out!
+        return `🌐 Internet timed out — "${cleanWord}" is a valid word in the dictionary, but the full online definition could not be fetched right now.`;
     }
 
     /**
