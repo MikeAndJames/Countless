@@ -163,13 +163,28 @@ export class MultiplayerService {
         if (!this.currentRoomCode) return;
         this.activeScreenName = roundType;
         const roomRef = ref(db, `rooms/${this.currentRoomCode}`);
-        await update(roomRef, {
+        
+        const updates = {
             status: "playing",
             activeScreen: roundType,
             gameData: gameData,
             roundResults: null, // Clear previous round results for fresh round!
             lastUpdated: Date.now()
-        });
+        };
+
+        // Initialize empty conundrum state when host starts the round
+        if (roundType === "conundrum") {
+            updates.conundrumState = {
+                status: "running",
+                buzzedPlayerId: null,
+                buzzedPlayerName: "",
+                currentGuess: "",
+                frozenSeconds: 30,
+                lockedOutPlayers: []
+            };
+        }
+
+        await update(roomRef, updates);
     }
 
     /**
@@ -218,6 +233,63 @@ export class MultiplayerService {
             baseScore: rawScore,
             submittedAt: Date.now()
         });
+    }
+
+    /**
+     * 8. BUZZ IN CONUNDRUM
+     * Player buzzed in! Freeze the timer and lock out others.
+     */
+    async buzzInConundrum(remainingSeconds) {
+        if (!this.currentRoomCode || !this.currentPlayerId) return;
+        
+        // Auto-lookup the player's name
+        const playerRef = ref(db, `rooms/${this.currentRoomCode}/players/${this.currentPlayerId}`);
+        const pSnap = await get(playerRef);
+        let pName = "Player";
+        if (pSnap.exists()) pName = pSnap.val().name;
+
+        const stateRef = ref(db, `rooms/${this.currentRoomCode}/conundrumState`);
+        await update(stateRef, {
+            status: "buzzed",
+            buzzedPlayerId: this.currentPlayerId,
+            buzzedPlayerName: pName,
+            currentGuess: "",
+            frozenSeconds: remainingSeconds
+        });
+    }
+
+    /**
+     * 9. UPDATE CONUNDRUM GUESS
+     * As the buzzed player types, sync their string so others see it live.
+     */
+    async updateConundrumGuess(guessString) {
+        if (!this.currentRoomCode) return;
+        const stateRef = ref(db, `rooms/${this.currentRoomCode}/conundrumState`);
+        await update(stateRef, {
+            currentGuess: guessString
+        });
+    }
+
+    /**
+     * 10. RESOLVE CONUNDRUM GUESS
+     */
+    async resolveConundrumGuess(isCorrect, lockedOutArray) {
+        if (!this.currentRoomCode) return;
+        const stateRef = ref(db, `rooms/${this.currentRoomCode}/conundrumState`);
+        
+        if (isCorrect) {
+            await update(stateRef, {
+                status: "ended"
+            });
+        } else {
+            await update(stateRef, {
+                status: "running",
+                buzzedPlayerId: null,
+                buzzedPlayerName: "",
+                currentGuess: "",
+                lockedOutPlayers: lockedOutArray
+            });
+        }
     }
 }
 

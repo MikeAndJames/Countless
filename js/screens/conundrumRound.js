@@ -11,6 +11,7 @@
 import { dictionaryEngine } from '../dictionary.js';
 import { playSound, playTick, playGong, playVictoryChime } from '../audio.js';
 import { CountdownClockComponent } from '../clock.js';
+import { multiplayerService } from '../multiplayer.js';
 
 let state = {
     targetWord: "",
@@ -88,11 +89,108 @@ export function renderConundrumRound(container, initialGameData = null) {
 
     attachEvents();
     startNewConundrum(initialGameData);
+
+    // Multi-player listener for Conundrum State
+    if (multiplayerService.currentRoomCode) {
+        multiplayerService.listenToRoom(multiplayerService.currentRoomCode, handleRoomUpdate);
+    }
 }
 
 export function cleanupConundrumRound() {
     stopTimer();
     removeKeyboardListener();
+}
+
+function handleRoomUpdate(roomData) {
+    if (!roomData || !roomData.conundrumState) return;
+    const cState = roomData.conundrumState;
+
+    if (cState.status === "buzzed") {
+        stopTimer();
+        state.remainingSeconds = cState.frozenSeconds;
+        
+        const buzzBtn = containerRef.querySelector('#btnBuzz');
+        buzzBtn.disabled = true;
+        buzzBtn.textContent = `🚨 ${cState.buzzedPlayerName.toUpperCase()} IS SOLVING!`;
+
+        // If I am the one who buzzed:
+        if (cState.buzzedPlayerId === multiplayerService.currentPlayerId) {
+            state.isBuzzed = true;
+            containerRef.querySelector('#buzzSection').classList.add('hidden');
+            containerRef.querySelector('#conundrumActions').classList.remove('hidden');
+            attachKeyboardListener();
+        } else {
+            // Someone else buzzed! I just watch.
+            state.isBuzzed = false;
+            containerRef.querySelector('#buzzSection').classList.remove('hidden');
+            containerRef.querySelector('#conundrumActions').classList.add('hidden');
+        }
+
+        // Live Sync Remote Guess!
+        if (cState.currentGuess !== undefined && cState.buzzedPlayerId !== multiplayerService.currentPlayerId) {
+            syncRemoteGuess(cState.currentGuess);
+        }
+    } 
+    else if (cState.status === "running") {
+        // Round resumed after a wrong guess!
+        // Lock out players who guessed wrong
+        const amILockedOut = cState.lockedOutPlayers && cState.lockedOutPlayers.includes(multiplayerService.currentPlayerId);
+        
+        const buzzBtn = containerRef.querySelector('#btnBuzz');
+        buzzBtn.classList.remove('hidden');
+        containerRef.querySelector('#buzzSection').classList.remove('hidden');
+        containerRef.querySelector('#conundrumActions').classList.add('hidden');
+        
+        if (amILockedOut) {
+            buzzBtn.disabled = true;
+            buzzBtn.textContent = "❌ YOU ARE LOCKED OUT";
+        } else {
+            buzzBtn.disabled = false;
+            buzzBtn.textContent = "🚨 BUZZ IN TO SOLVE!";
+        }
+
+        state.isBuzzed = false;
+        removeKeyboardListener();
+        
+        // Clear guess array and reset tiles to unused
+        state.answerTiles = [];
+        state.scrambledTiles.forEach(t => t.used = false);
+        renderTilesUI();
+
+        // Resume timer from frozen time
+        state.remainingSeconds = cState.frozenSeconds;
+        resumeTimer();
+    }
+}
+
+function syncRemoteGuess(guessStr) {
+    state.answerTiles = [];
+    state.scrambledTiles.forEach(t => t.used = false);
+    
+    for (const char of guessStr) {
+        const availableTile = state.scrambledTiles.find(t => t.char === char && !t.used);
+        if (availableTile) {
+            availableTile.used = true;
+            state.answerTiles.push({ id: availableTile.id, char: availableTile.char });
+        }
+    }
+    renderTilesUI();
+}
+
+function resumeTimer() {
+    stopTimer();
+    state.clockComp.update(state.maxTime - state.remainingSeconds);
+    state.timerInterval = setInterval(() => {
+        state.remainingSeconds--;
+        const timeSoFar = state.maxTime - state.remainingSeconds;
+        if (state.clockComp) state.clockComp.update(timeSoFar);
+        playTick(state.remainingSeconds % 2 === 0);
+        if (state.remainingSeconds <= 0) {
+            stopTimer();
+            playGong();
+            handleTimeout();
+        }
+    }, 1000);
 }
 
 function attachEvents() {
@@ -256,6 +354,12 @@ function selectTopTile(tile) {
     playSound(600, 0.04);
     renderTilesUI();
 
+    // LIVE SYNC: Tell Firebase what we typed so far!
+    if (multiplayerService.currentRoomCode) {
+        const currentGuessStr = state.answerTiles.map(t => t.char).join('');
+        multiplayerService.updateConundrumGuess(currentGuessStr);
+    }
+
     // If all 9 letters are locked in, evaluate immediately!
     if (state.answerTiles.length === 9) {
         submitConundrumAnswer();
@@ -263,16 +367,25 @@ function selectTopTile(tile) {
 }
 
 function buzzIn() {
-    state.isBuzzed = true;
-    stopTimer();
-    playSound(880, 0.2);
+    // ONLY buzz in if we are online!
+    if (multiplayerService.currentRoomCode) {
+        playSound(880, 0.2);
+        containerRef.querySelector('#btnBuzz').disabled = true;
+        // Tell Firebase we buzzed in, which will freeze everyone's clock via handleRoomUpdate!
+        multiplayerService.buzzInConundrum(state.remainingSeconds);
+    } else {
+        // Fallback for purely local offline play
+        state.isBuzzed = true;
+        stopTimer();
+        playSound(880, 0.2);
 
-    containerRef.querySelector('#btnBuzz').disabled = true;
-    containerRef.querySelector('#buzzSection').classList.add('hidden');
-    containerRef.querySelector('#conundrumActions').classList.remove('hidden');
+        containerRef.querySelector('#btnBuzz').disabled = true;
+        containerRef.querySelector('#buzzSection').classList.add('hidden');
+        containerRef.querySelector('#conundrumActions').classList.remove('hidden');
 
-    attachKeyboardListener();
-    renderTilesUI();
+        attachKeyboardListener();
+        renderTilesUI();
+    }
 }
 
 async function submitConundrumAnswer() {
@@ -302,12 +415,29 @@ async function submitConundrumAnswer() {
         const def = await dictionaryEngine.getDefinitionAsync(guess);
         defText.textContent = `Definition: ${def}`;
         playVictoryChime();
+        
+        if (multiplayerService.currentRoomCode) {
+            multiplayerService.resolveConundrumGuess(true, []);
+            multiplayerService.submitRoundResult({ score: 10, targetWord: state.targetWord, guess: guess });
+        }
     } else {
         resultBox.classList.add('invalid');
         title.textContent = `❌ INCORRECT GUESS! "${guess}"`;
         scorePill.textContent = `0 PTS`;
-        const def = await dictionaryEngine.getDefinitionAsync(state.targetWord);
-        defText.textContent = `The target 9-letter word was "${state.targetWord}". Definition: ${def}`;
+        
+        if (multiplayerService.currentRoomCode) {
+            defText.textContent = "Oops! You are locked out. Others can still guess!";
+            // Lock this player out and unfreeze the room for others!
+            multiplayerService.resolveConundrumGuess(false, [multiplayerService.currentPlayerId]);
+            
+            // Hide the red result box after 3.5 seconds so we can see the board again
+            setTimeout(() => {
+                resultBox.classList.add('hidden');
+            }, 3500);
+        } else {
+            const def = await dictionaryEngine.getDefinitionAsync(state.targetWord);
+            defText.textContent = `The target 9-letter word was "${state.targetWord}". Definition: ${def}`;
+        }
         playSound(220, 0.3);
     }
 }
