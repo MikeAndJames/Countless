@@ -76,12 +76,44 @@ export class CountdownDictionaryEngine {
     }
 
     /**
-     * STRICT DICTIONARY CHECK: Must exist in dictionaryMap!
+     * DICTIONARY CHECK: Accepts exact words, plurals (-S/-ES), past tense (-ED), participles (-ING), and comparatives (-ER/-EST)!
      */
     isValidWord(word) {
         if (!word || word.length < 3 || word.length > 9) return false;
         const cleanWord = word.trim().toUpperCase();
-        return this.dictionaryMap.has(cleanWord);
+
+        // 1. Direct match in local dictionary
+        if (this.dictionaryMap.has(cleanWord)) return true;
+
+        // 2. Plural '-S' / '-ES' (e.g. CRIMES -> CRIME, MATCHES -> MATCH, DREAMS -> DREAM)
+        if (cleanWord.endsWith('S') && cleanWord.length > 3) {
+            const singularS = cleanWord.slice(0, -1);
+            const singularEs = cleanWord.endsWith('ES') ? cleanWord.slice(0, -2) : null;
+            if (this.dictionaryMap.has(singularS) || (singularEs && this.dictionaryMap.has(singularEs))) return true;
+        }
+
+        // 3. Past tense '-ED' / '-D' (e.g. WALKED -> WALK, DANCED -> DANCE)
+        if (cleanWord.endsWith('ED') && cleanWord.length > 4) {
+            const baseEd = cleanWord.slice(0, -2);
+            const baseD = cleanWord.slice(0, -1);
+            if (this.dictionaryMap.has(baseEd) || this.dictionaryMap.has(baseD)) return true;
+        }
+
+        // 4. Present participle '-ING' (e.g. WALKING -> WALK, DANCING -> DANCE)
+        if (cleanWord.endsWith('ING') && cleanWord.length > 5) {
+            const baseIng = cleanWord.slice(0, -3);
+            const baseE = baseIng + 'E';
+            if (this.dictionaryMap.has(baseIng) || this.dictionaryMap.has(baseE)) return true;
+        }
+
+        // 5. Comparatives '-ER' / '-EST' (e.g. SHINIER -> SHINY, FASTER -> FAST)
+        if ((cleanWord.endsWith('ER') || cleanWord.endsWith('EST')) && cleanWord.length > 4) {
+            const baseEr = cleanWord.endsWith('ER') ? cleanWord.slice(0, -2) : cleanWord.slice(0, -3);
+            const baseY = baseEr.slice(0, -1) + 'Y';
+            if (this.dictionaryMap.has(baseEr) || this.dictionaryMap.has(baseY)) return true;
+        }
+
+        return false;
     }
 
     /**
