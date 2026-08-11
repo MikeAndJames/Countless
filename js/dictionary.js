@@ -51,21 +51,22 @@ export class CountdownDictionaryEngine {
      * Get a random 9-letter word from the full dictionary dataset
      */
     getRandom9LetterWord() {
-        if (!this.nineLetterWords || this.nineLetterWords.length <= 3) {
-            this.nineLetterWords = [];
-            for (const word of this.dictionaryMap.keys()) {
-                if (word.length === 9 && /^[A-Z]+$/.test(word)) {
-                    this.nineLetterWords.push(word);
-                }
-            }
-        }
+        // Curated list of recognizable 9-letter words for Conundrums!
+        const CURATED_CONUNDRUMS = [
+            "CELEBRATE", "CHAMPIONS", "COUNTLESS", "BEAUTIFUL", "WONDERFUL",
+            "BRILLIANT", "DANGEROUS", "CHALLENGE", "ADVENTURE", "AWARENESS",
+            "KNOWLEDGE", "ELEPHANTS", "ALLIGATOR", "IMPORTANT", "HAPPINESS",
+            "COMPUTERS", "SOMETHING", "EVERYBODY", "ATTENTION", "CHARACTER",
+            "CONDITION", "DIFFERENT", "EDUCATION", "EQUIPMENT", "EXCELLENT",
+            "FURNITURE", "LANDSCAPE", "NEWSPAPER", "OPERATION", "PASSENGER",
+            "PRESIDENT", "QUESTIONS", "REFERENCE", "SIGNATURE", "SITUATION",
+            "STRUCTURE", "TELEPHONE", "TRANSPORT", "BUTTERFLY", "CHOCOLATE",
+            "CROCODILE", "ASTRONAUT", "SATELLITE", "SUNFLOWER", "VOLUNTEER",
+            "ARCHITECT", "DETECTIVE", "ORCHESTRA", "PENGUINS", "APARTMENT"
+        ];
 
-        if (this.nineLetterWords.length === 0) {
-            return "CELEBRATE";
-        }
-
-        const idx = Math.floor(Math.random() * this.nineLetterWords.length);
-        return this.nineLetterWords[idx];
+        const idx = Math.floor(Math.random() * CURATED_CONUNDRUMS.length);
+        return CURATED_CONUNDRUMS[idx];
     }
 
     async getRandom9LetterWordAsync() {
