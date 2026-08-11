@@ -99,14 +99,24 @@ export class CountdownDictionaryEngine {
      * Async definition getter with live dictionary API fallback
      */
     async getDefinitionAsync(word) {
+        if (!word) return "";
         const cleanWord = word.trim().toUpperCase();
+        
         if (this.dictionaryMap.has(cleanWord)) {
-            return this.dictionaryMap.get(cleanWord);
+            const cachedDef = this.dictionaryMap.get(cleanWord);
+            if (cachedDef && !cachedDef.startsWith("Valid ")) {
+                return cachedDef;
+            }
         }
 
         const challenge = await this.challengeWordOnlineAsync(cleanWord);
-        if (challenge.valid) {
+        if (challenge.valid && challenge.definition) {
+            this.dictionaryMap.set(cleanWord, challenge.definition);
             return challenge.definition;
+        }
+
+        if (this.dictionaryMap.has(cleanWord)) {
+            return this.dictionaryMap.get(cleanWord);
         }
 
         return `A valid ${cleanWord.length}-letter word in the English dictionary.`;
