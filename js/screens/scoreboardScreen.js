@@ -8,8 +8,8 @@ export function renderScoreboardScreen(container, startGameCb) {
     onStartGameCallback = startGameCb;
 
     container.innerHTML = `
-        <div class="widescreen-layout">
-            <main class="center-board" style="align-items:center; justify-content:center; padding:40px;">
+        <div style="width:100%; height:100%; display:flex; padding:10px; box-sizing:border-box;">
+            <main class="center-board" style="flex:1; align-items:center; justify-content:center; padding:40px;">
                 <h1 style="color:var(--gold); font-size:2.5rem; text-align:center; margin-bottom:20px;">🏆 CUMULATIVE SCOREBOARD 🏆</h1>
                 
                 <div id="scoreboardList" style="width:100%; max-width:600px; display:flex; flex-direction:column; gap:12px; margin-bottom:30px;">
