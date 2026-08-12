@@ -50,11 +50,6 @@ export function renderSplashScreen(container, onNavigate) {
                         <span class="btn-icon">🎮</span>
                         <span class="btn-text">JOIN A GAME</span>
                     </button>
-
-                    <button id="btnSoloPractice" class="btn splash-btn btn-solo">
-                        <span class="btn-icon">🕹️</span>
-                        <span class="btn-text">SOLO PRACTICE MODE</span>
-                    </button>
                 </div>
             </div>
 
@@ -151,7 +146,6 @@ export function renderSplashScreen(container, onNavigate) {
 function attachSplashEvents(onNavigate) {
     const btnHost = containerRef.querySelector('#btnHostGame');
     const btnJoin = containerRef.querySelector('#btnJoinGame');
-    const btnSolo = containerRef.querySelector('#btnSoloPractice');
 
     const hostModal = containerRef.querySelector('#hostModal');
     const joinModal = containerRef.querySelector('#joinModal');
@@ -170,11 +164,6 @@ function attachSplashEvents(onNavigate) {
     btnJoin.addEventListener('click', () => {
         playSound(600, 0.08);
         joinModal.classList.remove('hidden');
-    });
-
-    btnSolo.addEventListener('click', () => {
-        playSound(700, 0.08);
-        onNavigate('letters');
     });
 
     btnCloseHost.addEventListener('click', () => hostModal.classList.add('hidden'));
