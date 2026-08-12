@@ -19,6 +19,8 @@ let state = {
     scrambledTiles: [], // [{ id: 0..8, char: 'C', used: false }]
     answerTiles: [],    // [{ id: 0..8, char: 'C' }]
     timerInterval: null,
+    buzzTimerInterval: null,
+    buzzRemainingSeconds: 5,
     remainingSeconds: 30,
     maxTime: 30,
     isBuzzed: false,
@@ -45,7 +47,7 @@ export function renderConundrumRound(container, initialGameData = null) {
 
                 <div class="notepad-section">
                     <span class="section-title">💡 CONUNDRUM RULES:</span>
-                    <span class="notepad-placeholder">Buzz in to solve! Tap tiles to lock in your 9-letter answer.<br><br><strong style="color:var(--gold);">Strict TV Rules:</strong> Letters cannot be reversed once clicked!</span>
+                    <span class="notepad-placeholder">Buzz in to solve! Tap tiles to lock in your 9-letter answer.<br><br><strong style="color:var(--gold);">Strict TV Rules:</strong> Letters cannot be reversed once clicked! You have 5 seconds per tile action when buzzed in.</span>
                 </div>
             </aside>
 
@@ -73,7 +75,7 @@ export function renderConundrumRound(container, initialGameData = null) {
 
                 <!-- SUBMIT BUTTON (AFTER BUZZING) -->
                 <div id="conundrumActions" class="actions-row hidden">
-                    <button id="btnSubmitConundrum" class="btn btn-submit" style="width:100%; font-size:1.1rem; padding:12px;">✅ SUBMIT ANSWER</button>
+                    <button id="btnSubmitConundrum" class="btn btn-submit" style="width:100%; font-size:1.1rem; padding:12px;">✅ SUBMIT ANSWER <span style="background:rgba(0,0,0,0.3); padding:2px 8px; border-radius:12px; margin-left:8px; font-weight:900; color:var(--gold);">⏱️ 5s</span></button>
                 </div>
 
                 <!-- RESULT CARD -->
@@ -103,6 +105,7 @@ export function renderConundrumRound(container, initialGameData = null) {
 
 export function cleanupConundrumRound() {
     stopTimer();
+    stopBuzzActionTimer();
     removeKeyboardListener();
 }
 
@@ -110,14 +113,17 @@ function handleRoomUpdate(roomData) {
     if (!roomData) return;
 
     if (roomData.activeScreen === 'scoreboard') {
+        stopBuzzActionTimer();
         switchScreen('scoreboard');
         return;
     }
     if (roomData.status === 'lobby' || roomData.activeScreen === 'lobby') {
+        stopBuzzActionTimer();
         switchScreen('lobby');
         return;
     }
     if (roomData.status === 'playing' && roomData.activeScreen && roomData.activeScreen !== 'conundrum') {
+        stopBuzzActionTimer();
         switchScreen(roomData.activeScreen, roomData.gameData);
         return;
     }
@@ -127,6 +133,7 @@ function handleRoomUpdate(roomData) {
 
     if (cState.status === "ended") {
         stopTimer();
+        stopBuzzActionTimer();
         removeKeyboardListener();
         const buzzBtn = containerRef ? containerRef.querySelector('#btnBuzz') : null;
         if (buzzBtn) buzzBtn.disabled = true;
@@ -153,9 +160,11 @@ function handleRoomUpdate(roomData) {
             containerRef.querySelector('#conundrumActions').classList.remove('hidden');
             attachKeyboardListener();
             renderTilesUI(); // RE-RENDER SO TILES BECOME CLICKABLE!
+            startBuzzActionTimer();
         } else {
             // Someone else buzzed! I just watch.
             state.isBuzzed = false;
+            stopBuzzActionTimer();
             containerRef.querySelector('#buzzSection').classList.remove('hidden');
             containerRef.querySelector('#conundrumActions').classList.add('hidden');
         }
@@ -166,6 +175,7 @@ function handleRoomUpdate(roomData) {
         }
     } 
     else if (cState.status === "running") {
+        stopBuzzActionTimer();
         // Round resumed after a wrong guess!
         // Lock out players who guessed wrong
         const amILockedOut = cState.lockedOutPlayers && cState.lockedOutPlayers.includes(multiplayerService.currentPlayerId);
@@ -390,6 +400,9 @@ function selectTopTile(tile) {
     playSound(600, 0.04);
     renderTilesUI();
 
+    // RESET 5-SECOND ACTION TIMER FOR NEXT LETTER INPUT!
+    resetBuzzActionTimer();
+
     // LIVE SYNC: Tell Firebase what we typed so far!
     if (multiplayerService.currentRoomCode) {
         const currentGuessStr = state.answerTiles.map(t => t.char).join('');
@@ -421,6 +434,7 @@ function buzzIn() {
 
         attachKeyboardListener();
         renderTilesUI();
+        startBuzzActionTimer();
     }
 }
 
@@ -430,6 +444,7 @@ async function submitConundrumAnswer() {
     const guess = state.answerTiles.map(t => t.char).join('');
     if (!guess) return;
 
+    stopBuzzActionTimer();
     removeKeyboardListener();
     containerRef.querySelector('#conundrumActions').classList.add('hidden');
 
@@ -631,4 +646,78 @@ async function handleTimeout() {
         multiplayerService.updateGameState({ "conundrumState/status": "ended" });
     }
     renderHostConundrumControls();
+}
+
+function startBuzzActionTimer() {
+    stopBuzzActionTimer();
+    state.buzzRemainingSeconds = 5;
+    updateBuzzTimerUI();
+
+    state.buzzTimerInterval = setInterval(() => {
+        state.buzzRemainingSeconds--;
+        updateBuzzTimerUI();
+        playSound(900, 0.03); // Ticking sound
+
+        if (state.buzzRemainingSeconds <= 0) {
+            stopBuzzActionTimer();
+            handleBuzzTimeout();
+        }
+    }, 1000);
+}
+
+function stopBuzzActionTimer() {
+    if (state.buzzTimerInterval) {
+        clearInterval(state.buzzTimerInterval);
+        state.buzzTimerInterval = null;
+    }
+}
+
+function resetBuzzActionTimer() {
+    if (state.isBuzzed) {
+        stopBuzzActionTimer();
+        state.buzzRemainingSeconds = 5;
+        updateBuzzTimerUI();
+        startBuzzActionTimer();
+    }
+}
+
+function updateBuzzTimerUI() {
+    const submitBtn = containerRef ? containerRef.querySelector('#btnSubmitConundrum') : null;
+    if (submitBtn) {
+        submitBtn.innerHTML = `✅ SUBMIT ANSWER <span style="background:rgba(0,0,0,0.3); padding:2px 8px; border-radius:12px; margin-left:8px; font-weight:900; color:var(--gold);">⏱️ ${state.buzzRemainingSeconds}s</span>`;
+    }
+}
+
+function handleBuzzTimeout() {
+    stopBuzzActionTimer();
+    removeKeyboardListener();
+
+    if (!containerRef) return;
+    containerRef.querySelector('#conundrumActions').classList.add('hidden');
+
+    const resultBox = containerRef.querySelector('#conundrumResultBox');
+    const title = containerRef.querySelector('#conundrumResultTitle');
+    const scorePill = containerRef.querySelector('#conundrumResultScore');
+    const defText = containerRef.querySelector('#conundrumResultDef');
+
+    if (resultBox && title && scorePill && defText) {
+        resultBox.classList.remove('hidden');
+        resultBox.classList.add('invalid');
+        title.textContent = `⏱️ BUZZ TIMER EXPIRED!`;
+        scorePill.textContent = `0 PTS`;
+        defText.textContent = "You took more than 5 seconds without selecting a letter! You are locked out.";
+
+        setTimeout(() => {
+            resultBox.classList.add('hidden');
+        }, 3500);
+    }
+
+    playSound(220, 0.4);
+
+    if (multiplayerService.currentRoomCode) {
+        const roomData = multiplayerService.roomData;
+        const currentLocked = (roomData && roomData.conundrumState && roomData.conundrumState.lockedOutPlayers) ? roomData.conundrumState.lockedOutPlayers : [];
+        const newLocked = Array.from(new Set([...currentLocked, multiplayerService.currentPlayerId]));
+        multiplayerService.resolveConundrumGuess(false, newLocked);
+    }
 }
