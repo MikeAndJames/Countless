@@ -283,8 +283,14 @@ export class MultiplayerService {
     /**
      * 10. RESOLVE CONUNDRUM GUESS
      */
-    async resolveConundrumGuess(isCorrect, lockedOutArray) {
+    async resolveConundrumGuess(isCorrect, newlyLockedIdOrArray) {
         if (!this.currentRoomCode) return;
+        const roomRef = ref(db, `rooms/${this.currentRoomCode}`);
+        const snap = await get(roomRef);
+        if (!snap.exists()) return;
+
+        const roomData = snap.val();
+        const cState = roomData.conundrumState || {};
         const stateRef = ref(db, `rooms/${this.currentRoomCode}/conundrumState`);
         
         if (isCorrect) {
@@ -292,13 +298,31 @@ export class MultiplayerService {
                 status: "ended"
             });
         } else {
-            await update(stateRef, {
-                status: "running",
-                buzzedPlayerId: null,
-                buzzedPlayerName: "",
-                currentGuess: "",
-                lockedOutPlayers: lockedOutArray
-            });
+            const existingLocked = cState.lockedOutPlayers || [];
+            const newIds = Array.isArray(newlyLockedIdOrArray) ? newlyLockedIdOrArray : [newlyLockedIdOrArray];
+            const combinedLocked = Array.from(new Set([...existingLocked, ...newIds].filter(Boolean)));
+
+            const players = roomData.players || {};
+            const totalPlayersCount = Object.keys(players).length;
+
+            if (totalPlayersCount > 0 && combinedLocked.length >= totalPlayersCount) {
+                // ALL players in room are locked out! End the round automatically.
+                await update(stateRef, {
+                    status: "ended",
+                    buzzedPlayerId: null,
+                    buzzedPlayerName: "",
+                    currentGuess: "",
+                    lockedOutPlayers: combinedLocked
+                });
+            } else {
+                await update(stateRef, {
+                    status: "running",
+                    buzzedPlayerId: null,
+                    buzzedPlayerName: "",
+                    currentGuess: "",
+                    lockedOutPlayers: combinedLocked
+                });
+            }
         }
     }
 }

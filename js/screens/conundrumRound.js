@@ -145,17 +145,19 @@ function handleRoomUpdate(roomData) {
         return;
     }
 
+    const amILockedOut = cState.lockedOutPlayers && cState.lockedOutPlayers.includes(multiplayerService.currentPlayerId);
+
     if (cState.status === "buzzed") {
         stopTimer();
         state.remainingSeconds = cState.frozenSeconds;
         
         const buzzBtn = containerRef.querySelector('#btnBuzz');
-        buzzBtn.disabled = true;
-        buzzBtn.textContent = `🚨 ${cState.buzzedPlayerName.toUpperCase()} IS SOLVING!`;
-
+        
         // If I am the one who buzzed:
         if (cState.buzzedPlayerId === multiplayerService.currentPlayerId) {
             state.isBuzzed = true;
+            buzzBtn.disabled = true;
+            buzzBtn.textContent = `🚨 YOU ARE SOLVING!`;
             containerRef.querySelector('#buzzSection').classList.add('hidden');
             containerRef.querySelector('#conundrumActions').classList.remove('hidden');
             attachKeyboardListener();
@@ -167,6 +169,14 @@ function handleRoomUpdate(roomData) {
             stopBuzzActionTimer();
             containerRef.querySelector('#buzzSection').classList.remove('hidden');
             containerRef.querySelector('#conundrumActions').classList.add('hidden');
+
+            if (amILockedOut) {
+                buzzBtn.disabled = true;
+                buzzBtn.textContent = "❌ YOU ARE LOCKED OUT";
+            } else {
+                buzzBtn.disabled = true;
+                buzzBtn.textContent = `🚨 ${cState.buzzedPlayerName.toUpperCase()} IS SOLVING!`;
+            }
         }
 
         // Live Sync Remote Guess!
@@ -176,9 +186,6 @@ function handleRoomUpdate(roomData) {
     } 
     else if (cState.status === "running") {
         stopBuzzActionTimer();
-        // Round resumed after a wrong guess!
-        // Lock out players who guessed wrong
-        const amILockedOut = cState.lockedOutPlayers && cState.lockedOutPlayers.includes(multiplayerService.currentPlayerId);
         
         const buzzBtn = containerRef.querySelector('#btnBuzz');
         buzzBtn.classList.remove('hidden');
@@ -480,7 +487,7 @@ async function submitConundrumAnswer() {
         if (multiplayerService.currentRoomCode) {
             defText.textContent = "Oops! You are locked out. Others can still guess!";
             // Lock this player out and unfreeze the room for others!
-            multiplayerService.resolveConundrumGuess(false, [multiplayerService.currentPlayerId]);
+            multiplayerService.resolveConundrumGuess(false, multiplayerService.currentPlayerId);
             
             // Hide the red result box after 3.5 seconds so we can see the board again
             setTimeout(() => {
@@ -715,9 +722,6 @@ function handleBuzzTimeout() {
     playSound(220, 0.4);
 
     if (multiplayerService.currentRoomCode) {
-        const roomData = multiplayerService.roomData;
-        const currentLocked = (roomData && roomData.conundrumState && roomData.conundrumState.lockedOutPlayers) ? roomData.conundrumState.lockedOutPlayers : [];
-        const newLocked = Array.from(new Set([...currentLocked, multiplayerService.currentPlayerId]));
-        multiplayerService.resolveConundrumGuess(false, newLocked);
+        multiplayerService.resolveConundrumGuess(false, multiplayerService.currentPlayerId);
     }
 }
