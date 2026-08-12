@@ -523,28 +523,16 @@ function submitNumberScore() {
         }).catch(e => console.warn("Submitting numbers result:", e));
     }
 
-    // Show View Scoreboard button for Host
+    // Show placeholder for Next Action
     const sidebar = containerRef.querySelector('.sidebar-card');
-    if (sidebar && !sidebar.querySelector('#btnViewScoreboard') && multiplayerService.isHost()) {
-        const btn = document.createElement('button');
-        btn.id = 'btnViewScoreboard';
-        btn.className = 'btn btn-deal';
-        btn.style.marginTop = '10px';
-        btn.style.padding = '12px';
-        btn.innerHTML = '🏆 VIEW CUMULATIVE SCOREBOARD';
-        btn.onclick = async () => {
-            playSound(600, 0.08);
-            await multiplayerService.broadcastRoundStart('scoreboard', null);
-        };
-        sidebar.appendChild(btn);
-    } else if (sidebar && !sidebar.querySelector('#btnWaitHost') && !multiplayerService.isHost() && multiplayerService.currentRoomCode) {
+    if (sidebar && !sidebar.querySelector('#hostNextActionArea') && multiplayerService.currentRoomCode) {
         const msg = document.createElement('div');
-        msg.id = 'btnWaitHost';
+        msg.id = 'hostNextActionArea';
         msg.style.textAlign = 'center';
         msg.style.marginTop = '10px';
         msg.style.color = '#94a3b8';
         msg.style.fontSize = '0.9rem';
-        msg.textContent = 'Waiting for host to continue...';
+        msg.textContent = 'Waiting for others to finish...';
         sidebar.appendChild(msg);
     }
 }
@@ -556,6 +544,30 @@ function subscribeToMultiplayerEvents() {
     multiplayerService.listenToRoom(code, (roomData) => {
         if (roomData.activeScreen === 'scoreboard') {
             switchScreen('scoreboard');
+            return;
+        }
+        
+        const actionArea = containerRef ? containerRef.querySelector('#hostNextActionArea') : null;
+        if (actionArea && roomData.players) {
+            const pCount = Object.keys(roomData.players).length;
+            const rCount = Object.keys(roomData.roundResults || {}).length;
+            
+            if (rCount >= pCount) {
+                if (multiplayerService.isHost(roomData.players)) {
+                    actionArea.innerHTML = `<button id="btnViewScoreboard" class="btn btn-deal" style="width:100%; font-size:1rem; padding:12px;">🏆 VIEW CUMULATIVE SCOREBOARD</button>`;
+                    const btn = document.getElementById('btnViewScoreboard');
+                    if (btn) {
+                        btn.onclick = async (e) => {
+                            e.target.disabled = true;
+                            await multiplayerService.broadcastRoundStart('scoreboard', null);
+                        };
+                    }
+                } else {
+                    actionArea.innerHTML = `Waiting for host to continue...`;
+                }
+            } else {
+                actionArea.innerHTML = `Waiting for others to finish... (${rCount}/${pCount})`;
+            }
         }
     });
 }

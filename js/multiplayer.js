@@ -51,7 +51,7 @@ export class MultiplayerService {
     /**
      * 1. CREATE A NEW ROOM (Host Action)
      */
-    async createRoom(roomCode, hostName) {
+    async createRoom(roomCode, hostName, timeHandicap = 30, scoreMultiplier = 1.0) {
         const cleanCode = roomCode.trim().toUpperCase();
         this.currentRoomCode = cleanCode;
         this.currentPlayerId = `p_${Date.now()}`;
@@ -69,8 +69,8 @@ export class MultiplayerService {
                     id: this.currentPlayerId,
                     name: hostName,
                     isHost: true,
-                    timeHandicap: 30, // 20s, 30s (default), 45s, 60s
-                    scoreMultiplier: 1.0, // 1.0x, 1.25x, 1.5x
+                    timeHandicap: Number(timeHandicap) || 30, // 20s, 30s (default), 45s, 60s
+                    scoreMultiplier: Number(scoreMultiplier) || 1.0, // 1.0x, 1.25x, 1.5x
                     score: 0
                 }
             },

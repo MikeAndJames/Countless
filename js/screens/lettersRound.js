@@ -552,10 +552,9 @@ function renderResultsPhaseUI() {
                     <span class="clock-digits-val" style="font-size:2.8rem; color:var(--gold);">${score} PTS</span>
                 </div>
 
-                ${multiplayerService.isHost(multiplayerService.currentRoomCode ? undefined : undefined) ? 
-                `<button id="btnViewScoreboard" class="btn btn-deal" style="font-size:1rem; padding:12px;">🏆 VIEW CUMULATIVE SCOREBOARD</button>` : 
-                `<div style="text-align:center; padding:12px; color:#94a3b8; font-size:0.9rem;">Waiting for host to continue...</div>`
-                }
+                <div id="hostNextActionArea" style="text-align:center; padding:12px; color:#94a3b8; font-size:0.9rem;">
+                    Waiting for others to finish...
+                </div>
             </aside>
 
             <!-- MAIN CENTER BOARD: CLEAN RESULTS & MULTIPLAYER SCOREBOARD -->
@@ -683,6 +682,29 @@ function renderScoreboardItemsUI(roomData) {
         boardEl.appendChild(row);
     });
 
+    const actionArea = containerRef.querySelector('#hostNextActionArea');
+    if (actionArea) {
+        const pCount = Object.keys(players).length;
+        const rCount = Object.keys(results).length;
+        
+        if (rCount >= pCount) {
+            if (multiplayerService.isHost(players)) {
+                actionArea.innerHTML = `<button id="btnViewScoreboard" class="btn btn-deal" style="font-size:1rem; padding:12px; width:100%;">🏆 VIEW CUMULATIVE SCOREBOARD</button>`;
+                const btnScoreboard = document.getElementById('btnViewScoreboard');
+                if (btnScoreboard) {
+                    btnScoreboard.addEventListener('click', async (e) => {
+                        e.target.disabled = true;
+                        await multiplayerService.broadcastRoundStart('scoreboard', null);
+                    });
+                }
+            } else {
+                actionArea.innerHTML = `Waiting for host to continue...`;
+            }
+        } else {
+            actionArea.innerHTML = `Waiting for others to finish... (${rCount}/${pCount})`;
+        }
+    }
+
     // Also append AI Best Word to Scoreboard
     if (state.declaredResult && state.declaredResult.aiBest) {
         const aiWord = state.declaredResult.aiBest.word;
@@ -731,13 +753,8 @@ async function showWordInspector(word) {
 }
 
 function attachResultsEvents() {
-    const btnViewScoreboard = containerRef.querySelector('#btnViewScoreboard');
-    if (btnViewScoreboard) {
-        btnViewScoreboard.addEventListener('click', async () => {
-            playSound(600, 0.08);
-            await multiplayerService.broadcastRoundStart('scoreboard', null);
-        });
-    }
+    // btnViewScoreboard listener is now attached dynamically in renderScoreboardItemsUI
+    // when all players have submitted results.
     
     const btnToggleAI = containerRef.querySelector('#btnToggleAI');
     const btnCloseAIModal = containerRef.querySelector('#btnCloseAIModal');
