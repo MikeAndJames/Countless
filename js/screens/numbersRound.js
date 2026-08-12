@@ -30,6 +30,7 @@ let state = {
     isDealing: false,
     isTimerRunning: false,
     history: [],
+    savedSolutions: [], // [{ id, val, diff, score, stepsText }]
     clockComp: null
 };
 
@@ -39,7 +40,7 @@ export function renderNumbersRound(container, initialGameData = null) {
     containerRef = container;
     container.innerHTML = `
         <div class="widescreen-layout">
-            <!-- LEFT SIDEBAR: TITLE, TIMER, DEAL BUTTON, EQUATION HISTORY -->
+            <!-- LEFT SIDEBAR: TITLE, TIMER, DEAL BUTTON, SAVED SOLUTIONS, EQUATION HISTORY -->
             <aside class="sidebar-card">
                 <div class="sidebar-header">
                     <h1 class="app-title">COUNTLESS 🎂</h1>
@@ -51,7 +52,12 @@ export function renderNumbersRound(container, initialGameData = null) {
                 <button id="btnNewNumbersRound" class="btn btn-deal">🎲 DEAL NUMBERS</button>
 
                 <div class="notepad-section">
-                    <span class="section-title">📝 EQUATION STEPS:</span>
+                    <span class="section-title">📝 SAVED SOLUTIONS (30S):</span>
+                    <div id="savedSolutionsList" class="saved-words-chips" style="margin-bottom:12px;">
+                        <span class="notepad-placeholder">No solutions saved yet.</span>
+                    </div>
+
+                    <span class="section-title">📐 EQUATION STEPS:</span>
                     <div id="equationHistory" class="saved-words-chips">
                         <span class="notepad-placeholder">Pick numbers & operators to solve target!</span>
                     </div>
@@ -81,9 +87,11 @@ export function renderNumbersRound(container, initialGameData = null) {
                 </div>
 
                 <!-- ACTIONS ROW -->
-                <div class="actions-row">
-                    <button id="btnUndoStep" class="btn btn-secondary">↩️ UNDO STEP</button>
-                    <button id="btnSubmitNumber" class="btn btn-submit" style="flex:1;">✅ DECLARE SCORE</button>
+                <div class="actions-row" style="display:flex; gap:8px; flex-wrap:wrap; width:100%;">
+                    <button id="btnUndoStep" class="btn btn-secondary" style="padding:10px 12px;">↩️ UNDO</button>
+                    <button id="btnResetBoard" class="btn btn-secondary" style="padding:10px 12px; background:#475569;">🔄 RESET TILES</button>
+                    <button id="btnSaveSolution" class="btn btn-save" style="padding:10px 12px; background:var(--gold); color:#0f172a; font-weight:800;">➕ SAVE SOLUTION</button>
+                    <button id="btnSubmitNumber" class="btn btn-submit" style="flex:1; padding:10px 12px;">✅ DECLARE SCORE</button>
                 </div>
 
                 <!-- RESULT CARD -->
@@ -135,14 +143,18 @@ function attachEvents() {
     const btnNew = containerRef.querySelector('#btnNewNumbersRound');
     const opBtns = containerRef.querySelectorAll('.btn-op');
     const btnUndo = containerRef.querySelector('#btnUndoStep');
+    const btnReset = containerRef.querySelector('#btnResetBoard');
+    const btnSave = containerRef.querySelector('#btnSaveSolution');
     const btnSubmit = containerRef.querySelector('#btnSubmitNumber');
     const btnAI = containerRef.querySelector('#btnSolveNumbersAI');
     const btnCloseAI = containerRef.querySelector('#btnCloseNumbersAI');
 
-    btnNew.addEventListener('click', () => startNewNumbersRound());
-    btnUndo.addEventListener('click', undoLastStep);
-    btnSubmit.addEventListener('click', submitNumberScore);
-    btnAI.addEventListener('click', toggleAIMathSolver);
+    if (btnNew) btnNew.addEventListener('click', () => startNewNumbersRound());
+    if (btnUndo) btnUndo.addEventListener('click', undoLastStep);
+    if (btnReset) btnReset.addEventListener('click', resetBoardTiles);
+    if (btnSave) btnSave.addEventListener('click', saveCurrentSolutionToNotepad);
+    if (btnSubmit) btnSubmit.addEventListener('click', submitNumberScore);
+    if (btnAI) btnAI.addEventListener('click', toggleAIMathSolver);
     if (btnCloseAI) btnCloseAI.addEventListener('click', () => {
         containerRef.querySelector('#numbersAIResults').classList.add('hidden');
     });
@@ -184,6 +196,7 @@ function startNewNumbersRound(initialGameData = null) {
     state.selectedFirst = null;
     state.selectedOp = null;
     state.history = [];
+    state.savedSolutions = [];
     state.isDealing = true;
 
     containerRef.querySelector('#targetDisplay').textContent = state.targetNumber;
@@ -201,6 +214,7 @@ function startNewNumbersRound(initialGameData = null) {
 
     renderTilesUI();
     renderHistoryUI();
+    renderSavedSolutionsUI();
 
     // SEQUENTIAL DEALING FOR NUMBERS (1 TILE EVERY 700ms)
     let dealIndex = 0;
@@ -434,6 +448,102 @@ function renderHistoryUI() {
     });
 }
 
+function saveCurrentSolutionToNotepad() {
+    if (state.isDealing) return;
+
+    const activeTiles = state.workingTiles.filter(t => !t.used);
+    if (activeTiles.length === 0) return;
+
+    // Pick tile closest to target
+    let closest = activeTiles[0];
+    let minDiff = Math.abs(closest.val - state.targetNumber);
+    activeTiles.forEach(t => {
+        const d = Math.abs(t.val - state.targetNumber);
+        if (d < minDiff) {
+            minDiff = d;
+            closest = t;
+        }
+    });
+
+    let score = 0;
+    if (minDiff === 0) score = 10;
+    else if (minDiff <= 5) score = 7;
+    else if (minDiff <= 10) score = 5;
+
+    const stepsText = state.history.map(h => h.text).join(' → ') || `Raw Tile: ${closest.val}`;
+    
+    // Avoid duplicate value entries if identical number already saved
+    const exists = state.savedSolutions.find(s => s.val === closest.val && s.diff === minDiff);
+    if (!exists) {
+        state.savedSolutions.push({
+            id: `sol_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            val: closest.val,
+            diff: minDiff,
+            score: score,
+            stepsText: stepsText
+        });
+        playSound(880, 0.1);
+    }
+    renderSavedSolutionsUI();
+}
+
+function resetBoardTiles() {
+    if (state.isDealing || state.allDrawnNumbers.length < 6) return;
+
+    state.workingTiles = state.allDrawnNumbers.map((val, idx) => ({
+        id: `t_${idx}_${Date.now()}`,
+        val: val,
+        used: false,
+        isCreated: false,
+        parentIds: []
+    }));
+
+    state.selectedFirst = null;
+    state.selectedOp = null;
+    state.history = [];
+
+    renderTilesUI();
+    renderHistoryUI();
+    playSound(350, 0.05);
+}
+
+function renderSavedSolutionsUI() {
+    const container = containerRef ? containerRef.querySelector('#savedSolutionsList') : null;
+    if (!container) return;
+
+    if (state.savedSolutions.length === 0) {
+        container.innerHTML = `<span class="notepad-placeholder">No solutions saved yet. Tap "SAVE SOLUTION" to keep your work!</span>`;
+        return;
+    }
+
+    container.innerHTML = '';
+    state.savedSolutions.forEach((sol) => {
+        const chip = document.createElement('div');
+        chip.className = 'word-chip';
+        chip.style.display = 'flex';
+        chip.style.justifyContent = 'space-between';
+        chip.style.alignItems = 'center';
+        chip.style.padding = '8px 12px';
+        chip.style.margin = '4px 0';
+        chip.style.background = 'rgba(15, 23, 42, 0.85)';
+        chip.style.border = sol.diff === 0 ? '2px solid var(--gold)' : '1px solid var(--cyan)';
+        chip.style.borderRadius = '8px';
+
+        let labelText = `${sol.val}`;
+        if (sol.diff === 0) labelText += ` (EXACT MATCH!)`;
+        else labelText += ` (Off by ${sol.diff})`;
+
+        chip.innerHTML = `
+            <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:8px;">
+                <strong style="color:${sol.diff === 0 ? 'var(--gold)' : '#ffffff'}; font-size:1rem;">${labelText}</strong>
+                <div style="font-size:0.75rem; color:#94a3b8; overflow:hidden; text-overflow:ellipsis;">${sol.stepsText}</div>
+            </div>
+            <span style="font-weight:900; background:${sol.score > 0 ? 'var(--gold)' : '#475569'}; color:#0f172a; padding:3px 8px; border-radius:6px; font-size:0.85rem;">${sol.score} PTS</span>
+        `;
+        container.appendChild(chip);
+    });
+}
+
 function resetAndStartTimer() {
     stopTimer();
     const clockMount = containerRef.querySelector('#clockMountNumbers');
@@ -469,34 +579,44 @@ function submitNumberScore() {
     if (state.isDealing) return;
     stopTimer();
 
+    // Auto-save current active board state if not already saved!
     const activeTiles = state.workingTiles.filter(t => !t.used);
-    if (activeTiles.length === 0) return;
+    if (activeTiles.length > 0) {
+        saveCurrentSolutionToNotepad();
+    }
 
-    let closestTile = activeTiles[0];
-    let minDiff = Math.abs(closestTile.val - state.targetNumber);
+    // If still no saved solutions, add raw drawn numbers
+    if (state.savedSolutions.length === 0 && state.allDrawnNumbers.length > 0) {
+        state.allDrawnNumbers.forEach(num => {
+            const diff = Math.abs(num - state.targetNumber);
+            let score = 0;
+            if (diff === 0) score = 10;
+            else if (diff <= 5) score = 7;
+            else if (diff <= 10) score = 5;
 
-    activeTiles.forEach(t => {
-        const diff = Math.abs(t.val - state.targetNumber);
-        if (diff < minDiff) {
-            minDiff = diff;
-            closestTile = t;
-        }
-    });
+            state.savedSolutions.push({
+                id: `sol_raw_${num}`,
+                val: num,
+                diff: diff,
+                score: score,
+                stepsText: `Raw Tile: ${num}`
+            });
+        });
+    }
 
-    let score = 0;
+    // Sort solutions by score descending, then min diff ascending
+    state.savedSolutions.sort((a, b) => b.score - a.score || a.diff - b.diff);
+    const bestSolution = state.savedSolutions[0] || { val: 0, diff: 999, score: 0, stepsText: 'None' };
+
     let titleText = "";
-    if (minDiff === 0) {
-        score = 10;
-        titleText = `🎯 EXACT TARGET MATCH (${closestTile.val})!`;
-    } else if (minDiff <= 5) {
-        score = 7;
-        titleText = `🥈 VERY CLOSE (${closestTile.val})!`;
-    } else if (minDiff <= 10) {
-        score = 5;
-        titleText = `🥉 WITHIN 10 (${closestTile.val})!`;
+    if (bestSolution.diff === 0) {
+        titleText = `🎯 EXACT TARGET MATCH (${bestSolution.val})!`;
+    } else if (bestSolution.diff <= 5) {
+        titleText = `🥈 VERY CLOSE (${bestSolution.val})!`;
+    } else if (bestSolution.diff <= 10) {
+        titleText = `🥉 WITHIN 10 (${bestSolution.val})!`;
     } else {
-        score = 0;
-        titleText = `❌ OFF BY ${minDiff} (${closestTile.val})`;
+        titleText = `❌ OFF BY ${bestSolution.diff} (${bestSolution.val})`;
     }
 
     const box = containerRef.querySelector('#numberResultBox');
@@ -512,13 +632,14 @@ function submitNumberScore() {
     containerRef.querySelector('.ai-section').classList.remove('hidden');
 
     title.textContent = titleText;
-    scoreEl.textContent = `${score} PTS`;
-    diffEl.textContent = `Target: ${state.targetNumber} | Your Closest: ${closestTile.val} (Difference: ${minDiff})`;
+    scoreEl.textContent = `${bestSolution.score} PTS`;
+    diffEl.textContent = `Target: ${state.targetNumber} | Declared Solution: ${bestSolution.val} (Difference: ${bestSolution.diff}) — Steps: ${bestSolution.stepsText}`;
 
     // Submit multiplayer score
     if (multiplayerService.currentRoomCode) {
         multiplayerService.submitRoundResult({
-            score: score,
+            score: bestSolution.score,
+            targetWord: `${bestSolution.val}`,
             isValid: true // Math is always valid if calculated by the game
         }).catch(e => console.warn("Submitting numbers result:", e));
     }
