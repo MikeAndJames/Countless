@@ -104,13 +104,13 @@ export function renderNumbersRound(container, initialGameData = null) {
                 </div>
 
                 <!-- MULTIPLAYER ROUND SCOREBOARD CARD -->
-                <div id="numbersMultiplayerBoardCard" class="result-card hidden" style="flex:1; display:flex; flex-direction:column; padding:12px; border:2px solid var(--gold); margin-top:12px;">
-                    <h3 style="color:var(--gold); font-size:1.1rem; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div id="numbersMultiplayerBoardCard" class="result-card hidden" style="max-height:150px; display:flex; flex-direction:column; padding:10px 12px; border:2px solid var(--gold); margin-top:8px; box-sizing:border-box;">
+                    <h3 style="color:var(--gold); font-size:1rem; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
                         <span>🏆 MULTIPLAYER NUMBERS SCOREBOARD</span>
-                        <small style="color:#94a3b8; font-size:0.75rem;">Declared target & solution steps</small>
+                        <small style="color:#94a3b8; font-size:0.75rem;">Scroll for all players</small>
                     </h3>
 
-                    <div id="resultsMultiplayerBoard" style="display:flex; flex-direction:column; gap:6px; flex:1; overflow-y:auto;">
+                    <div id="resultsMultiplayerBoard" style="display:flex; flex-direction:column; gap:6px; flex:1; overflow-y:auto; padding-right:4px;">
                         <div style="color:#94a3b8; font-size:0.85rem;">Waiting for player submissions...</div>
                     </div>
                 </div>
