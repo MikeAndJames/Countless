@@ -103,6 +103,18 @@ export function renderNumbersRound(container, initialGameData = null) {
                     <p id="numberResultDiff" class="result-def"></p>
                 </div>
 
+                <!-- MULTIPLAYER ROUND SCOREBOARD CARD -->
+                <div id="numbersMultiplayerBoardCard" class="result-card hidden" style="flex:1; display:flex; flex-direction:column; padding:12px; border:2px solid var(--gold); margin-top:12px;">
+                    <h3 style="color:var(--gold); font-size:1.1rem; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🏆 MULTIPLAYER NUMBERS SCOREBOARD</span>
+                        <small style="color:#94a3b8; font-size:0.75rem;">Declared target & solution steps</small>
+                    </h3>
+
+                    <div id="resultsMultiplayerBoard" style="display:flex; flex-direction:column; gap:6px; flex:1; overflow-y:auto;">
+                        <div style="color:#94a3b8; font-size:0.85rem;">Waiting for player submissions...</div>
+                    </div>
+                </div>
+
                 <!-- AI SOLVER BUTTON -->
                 <div class="ai-section">
                     <button id="btnSolveNumbersAI" class="btn btn-ai">💡 SHOW AI MATH TARGET SOLUTION</button>
@@ -640,6 +652,9 @@ function submitNumberScore() {
         multiplayerService.submitRoundResult({
             score: bestSolution.score,
             targetWord: `${bestSolution.val}`,
+            declaredNumber: bestSolution.val,
+            diff: bestSolution.diff,
+            stepsText: bestSolution.stepsText,
             isValid: true // Math is always valid if calculated by the game
         }).catch(e => console.warn("Submitting numbers result:", e));
     }
@@ -668,29 +683,91 @@ function subscribeToMultiplayerEvents() {
             return;
         }
         
-        const actionArea = containerRef ? containerRef.querySelector('#hostNextActionArea') : null;
-        if (actionArea && roomData.players) {
-            const pCount = Object.keys(roomData.players).length;
-            const rCount = Object.keys(roomData.roundResults || {}).length;
-            
-            if (rCount >= pCount) {
-                if (multiplayerService.isHost(roomData.players)) {
-                    actionArea.innerHTML = `<button id="btnViewScoreboard" class="btn btn-deal" style="width:100%; font-size:1rem; padding:12px;">🏆 VIEW CUMULATIVE SCOREBOARD</button>`;
-                    const btn = document.getElementById('btnViewScoreboard');
-                    if (btn) {
-                        btn.onclick = async (e) => {
-                            e.target.disabled = true;
-                            await multiplayerService.broadcastRoundStart('scoreboard', null);
-                        };
-                    }
-                } else {
-                    actionArea.innerHTML = `Waiting for host to continue...`;
+        renderScoreboardItemsUI(roomData);
+    });
+}
+
+function renderScoreboardItemsUI(roomData) {
+    const boardCard = containerRef ? containerRef.querySelector('#numbersMultiplayerBoardCard') : null;
+    const boardEl = containerRef ? containerRef.querySelector('#resultsMultiplayerBoard') : null;
+    if (!boardEl || !roomData) return;
+
+    if (multiplayerService.currentRoomCode) {
+        if (boardCard) boardCard.classList.remove('hidden');
+    } else {
+        if (boardCard) boardCard.classList.add('hidden');
+        return;
+    }
+
+    boardEl.innerHTML = '';
+    const players = roomData.players || {};
+    const results = roomData.roundResults || {};
+
+    Object.values(players).forEach(p => {
+        const res = results[p.id];
+        const isMe = p.id === multiplayerService.currentPlayerId;
+
+        const row = document.createElement('div');
+        row.className = 'word-chip';
+        row.style.display = 'flex';
+        row.style.justifyContent = 'space-between';
+        row.style.alignItems = 'center';
+        row.style.padding = '8px 12px';
+        row.style.margin = '4px 0';
+        row.style.background = 'rgba(15, 23, 42, 0.85)';
+        row.style.border = res && res.diff === 0 ? '2px solid var(--gold)' : '1px solid var(--border-color, #334155)';
+
+        if (res) {
+            let label = `${res.declaredNumber !== undefined ? res.declaredNumber : (res.targetWord || '0')}`;
+            if (res.diff === 0) label += ` (EXACT MATCH!)`;
+            else if (res.diff !== undefined) label += ` (Off by ${res.diff})`;
+
+            const steps = res.stepsText || 'Direct Tile';
+
+            row.innerHTML = `
+                <div style="flex:1; overflow:hidden; text-overflow:ellipsis; padding-right:8px;">
+                    <span>${p.isHost ? '👑 ' : '🎮 '}<strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold);">(YOU)</small>' : ''}:</span>
+                    <strong style="color:var(--gold); font-size:1rem; margin-left:6px;">${label}</strong>
+                    <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Steps: ${steps}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="chip-len" style="font-weight:900; background:${res.score > 0 ? 'var(--gold)' : '#475569'}; color:#0f172a; padding:3px 8px; border-radius:6px;">${res.score} PTS</span>
+                </div>
+            `;
+        } else {
+            row.innerHTML = `
+                <div>
+                    <span>${p.isHost ? '👑 ' : '🎮 '}<strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold);">(YOU)</small>' : ''}:</span>
+                    <span style="color:#94a3b8; font-style:italic; margin-left:6px;">Calculating...</span>
+                </div>
+                <span style="color:#94a3b8; font-size:0.85rem;">⏳ WAITING</span>
+            `;
+        }
+        boardEl.appendChild(row);
+    });
+
+    const actionArea = containerRef ? containerRef.querySelector('#hostNextActionArea') : null;
+    if (actionArea) {
+        const pCount = Object.keys(players).length;
+        const rCount = Object.keys(results).length;
+        
+        if (rCount >= pCount) {
+            if (multiplayerService.isHost(players)) {
+                actionArea.innerHTML = `<button id="btnViewScoreboard" class="btn btn-deal" style="font-size:1rem; padding:12px; width:100%;">🏆 VIEW CUMULATIVE SCOREBOARD</button>`;
+                const btnScoreboard = document.getElementById('btnViewScoreboard');
+                if (btnScoreboard) {
+                    btnScoreboard.addEventListener('click', async (e) => {
+                        e.target.disabled = true;
+                        await multiplayerService.broadcastRoundStart('scoreboard', null);
+                    });
                 }
             } else {
-                actionArea.innerHTML = `Waiting for others to finish... (${rCount}/${pCount})`;
+                actionArea.innerHTML = `Waiting for host to continue...`;
             }
+        } else {
+            actionArea.innerHTML = `Waiting for others to finish... (${rCount}/${pCount})`;
         }
-    });
+    }
 }
 
 function toggleAIMathSolver() {
