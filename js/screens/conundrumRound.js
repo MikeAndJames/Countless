@@ -607,9 +607,9 @@ function resetAndStartTimer() {
     const clockMount = containerRef.querySelector('#clockMountConundrum');
     if (!clockMount) return;
 
-    state.maxTime = multiplayerService.currentRoomCode ? multiplayerService.getMyTimeHandicap() : 30;
-    state.clockComp = new CountdownClockComponent(clockMount, state.maxTime);
-    state.remainingSeconds = state.maxTime;
+    state.maxTime = 30;
+    state.clockComp = new CountdownClockComponent(clockMount, 30);
+    state.remainingSeconds = 30;
     state.clockComp.update(0);
 
     state.timerInterval = setInterval(() => {
