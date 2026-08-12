@@ -12,6 +12,7 @@ import { dictionaryEngine } from '../dictionary.js';
 import { playSound, playTick, playGong, playVictoryChime } from '../audio.js';
 import { CountdownClockComponent } from '../clock.js';
 import { multiplayerService } from '../multiplayer.js';
+import { switchScreen } from '../main.js';
 
 let state = {
     targetWord: "",
@@ -83,6 +84,10 @@ export function renderConundrumRound(container, initialGameData = null) {
                     </div>
                     <p id="conundrumResultDef" class="result-def" style="margin-top:6px; font-size:0.95rem;"></p>
                 </div>
+
+                <!-- HOST ACTION CONTROLS CONTAINER -->
+                <div id="hostConundrumActionArea" class="actions-row hidden" style="margin-top:15px; flex-direction:column; gap:10px; width:100%;">
+                </div>
             </main>
         </div>
     `;
@@ -102,8 +107,36 @@ export function cleanupConundrumRound() {
 }
 
 function handleRoomUpdate(roomData) {
-    if (!roomData || !roomData.conundrumState) return;
+    if (!roomData) return;
+
+    if (roomData.activeScreen === 'scoreboard') {
+        switchScreen('scoreboard');
+        return;
+    }
+    if (roomData.status === 'lobby' || roomData.activeScreen === 'lobby') {
+        switchScreen('lobby');
+        return;
+    }
+    if (roomData.status === 'playing' && roomData.activeScreen && roomData.activeScreen !== 'conundrum') {
+        switchScreen(roomData.activeScreen, roomData.gameData);
+        return;
+    }
+
+    if (!roomData.conundrumState) return;
     const cState = roomData.conundrumState;
+
+    if (cState.status === "ended") {
+        stopTimer();
+        removeKeyboardListener();
+        const buzzBtn = containerRef ? containerRef.querySelector('#btnBuzz') : null;
+        if (buzzBtn) buzzBtn.disabled = true;
+        if (containerRef) {
+            containerRef.querySelector('#buzzSection').classList.add('hidden');
+            containerRef.querySelector('#conundrumActions').classList.add('hidden');
+        }
+        renderHostConundrumControls(roomData);
+        return;
+    }
 
     if (cState.status === "buzzed") {
         stopTimer();
@@ -255,6 +288,8 @@ async function startNewConundrum(initialGameData = null) {
     // 2. Reset UI elements
     containerRef.querySelector('#conundrumResultBox').classList.add('hidden');
     containerRef.querySelector('#conundrumActions').classList.add('hidden');
+    const hostActionArea = containerRef.querySelector('#hostConundrumActionArea');
+    if (hostActionArea) hostActionArea.classList.add('hidden');
     containerRef.querySelector('#buzzSection').classList.remove('hidden');
     containerRef.querySelector('#btnBuzz').disabled = false;
 
@@ -421,6 +456,7 @@ async function submitConundrumAnswer() {
             multiplayerService.resolveConundrumGuess(true, []);
             multiplayerService.submitRoundResult({ score: 10, targetWord: state.targetWord, guess: guess });
         }
+        renderHostConundrumControls();
     } else {
         resultBox.classList.add('invalid');
         title.textContent = `❌ INCORRECT GUESS! "${guess}"`;
@@ -440,6 +476,94 @@ async function submitConundrumAnswer() {
             defText.textContent = `The target 9-letter word was "${state.targetWord}". Definition: ${def}`;
         }
         playSound(220, 0.3);
+    }
+}
+
+function renderHostConundrumControls(roomData = null) {
+    const actionArea = containerRef ? containerRef.querySelector('#hostConundrumActionArea') : null;
+    if (!actionArea) return;
+
+    if (!multiplayerService.currentRoomCode) {
+        actionArea.classList.add('hidden');
+        return;
+    }
+
+    actionArea.classList.remove('hidden');
+    const players = roomData ? roomData.players : null;
+    const isHost = multiplayerService.isHost(players);
+
+    if (isHost) {
+        actionArea.innerHTML = `
+            <div style="text-align:center; color:var(--gold); font-weight:800; margin-bottom:4px; font-size:1.1rem;">👑 HOST GAME CONTROLS</div>
+            <button id="btnConundrumScoreboard" class="btn btn-deal" style="width:100%; font-size:1.05rem; padding:12px;">🏆 VIEW CUMULATIVE SCOREBOARD</button>
+            <div style="display:flex; gap:10px; width:100%; margin-top:6px; flex-wrap:wrap;">
+                <button id="btnHostNextLetters" class="btn btn-vowel" style="flex:1; min-width:130px; padding:10px; font-size:0.9rem;">🔤 NEXT: LETTERS</button>
+                <button id="btnHostNextNumbers" class="btn btn-vowel" style="flex:1; min-width:130px; padding:10px; font-size:0.9rem;">🔢 NEXT: NUMBERS</button>
+                <button id="btnHostNextConundrum" class="btn btn-vowel" style="flex:1; min-width:130px; padding:10px; font-size:0.9rem;">🎲 NEXT CONUNDRUM</button>
+            </div>
+            <button id="btnHostEndGame" class="btn btn-submit" style="width:100%; background:#ef4444; margin-top:6px; padding:10px; font-size:0.95rem;">🛑 END GAME (RETURN TO LOBBY)</button>
+        `;
+
+        const btnScoreboard = actionArea.querySelector('#btnConundrumScoreboard');
+        if (btnScoreboard) {
+            btnScoreboard.addEventListener('click', async (e) => {
+                e.target.disabled = true;
+                await multiplayerService.broadcastRoundStart('scoreboard', null);
+            });
+        }
+
+        const btnLetters = actionArea.querySelector('#btnHostNextLetters');
+        if (btnLetters) {
+            btnLetters.addEventListener('click', async (e) => {
+                e.target.disabled = true;
+                const VOWELS = ['A','E','I','O','U'];
+                const CONS = ['B','C','D','F','G','H','J','K','L','M','N','P','Q','R','S','T','V','W','X','Y','Z'];
+                let letters = [];
+                for(let i=0; i<4; i++) letters.push(VOWELS[Math.floor(Math.random()*VOWELS.length)]);
+                for(let i=0; i<5; i++) letters.push(CONS[Math.floor(Math.random()*CONS.length)]);
+                await multiplayerService.broadcastRoundStart('letters', { drawnLetters: letters });
+            });
+        }
+
+        const btnNumbers = actionArea.querySelector('#btnHostNextNumbers');
+        if (btnNumbers) {
+            btnNumbers.addEventListener('click', async (e) => {
+                e.target.disabled = true;
+                const LARGE = [25, 50, 75, 100];
+                const SMALL = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10];
+                let drawn = [];
+                const largeCopy = [...LARGE];
+                const smallCopy = [...SMALL];
+                for (let i=0; i<2; i++) drawn.push(largeCopy.splice(Math.floor(Math.random()*largeCopy.length), 1)[0]);
+                for (let i=0; i<4; i++) drawn.push(smallCopy.splice(Math.floor(Math.random()*smallCopy.length), 1)[0]);
+                const target = Math.floor(Math.random() * 899) + 101;
+                await multiplayerService.broadcastRoundStart('numbers', { drawnNumbers: drawn, targetNumber: target });
+            });
+        }
+
+        const btnNextConundrum = actionArea.querySelector('#btnHostNextConundrum');
+        if (btnNextConundrum) {
+            btnNextConundrum.addEventListener('click', async (e) => {
+                e.target.disabled = true;
+                const targetWord = await dictionaryEngine.getRandom9LetterWordAsync();
+                const scrambled = scrambleWord(targetWord);
+                await multiplayerService.broadcastRoundStart('conundrum', { conundrumWord: targetWord, scrambledWord: scrambled });
+            });
+        }
+
+        const btnEndGame = actionArea.querySelector('#btnHostEndGame');
+        if (btnEndGame) {
+            btnEndGame.addEventListener('click', async (e) => {
+                e.target.disabled = true;
+                await multiplayerService.updateGameState({ status: 'lobby', activeScreen: 'lobby' });
+            });
+        }
+    } else {
+        actionArea.innerHTML = `
+            <div style="text-align:center; color:#94a3b8; font-size:1rem; font-weight:600; padding:10px;">
+                Waiting for host to select the next action...
+            </div>
+        `;
     }
 }
 
@@ -502,4 +626,9 @@ async function handleTimeout() {
     scorePill.textContent = `0 PTS`;
     const def = await dictionaryEngine.getDefinitionAsync(state.targetWord);
     defText.textContent = `The correct 9-letter word was "${state.targetWord}". Definition: ${def}`;
+
+    if (multiplayerService.currentRoomCode) {
+        multiplayerService.updateGameState({ "conundrumState/status": "ended" });
+    }
+    renderHostConundrumControls();
 }

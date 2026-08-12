@@ -18,10 +18,11 @@ export function renderScoreboardScreen(container, startGameCb) {
                     <div style="text-align:center; color:#94a3b8;">Loading scores...</div>
                 </div>
 
-                <div id="hostControls" class="hidden" style="display:flex; gap:16px; justify-content:center; width:100%;">
+                <div id="hostControls" class="hidden" style="display:flex; gap:16px; justify-content:center; width:100%; flex-wrap:wrap;">
                     <button id="btnNextLetters" class="btn btn-deal">🔤 NEXT: LETTERS</button>
                     <button id="btnNextNumbers" class="btn btn-deal">🔢 NEXT: NUMBERS</button>
                     <button id="btnNextConundrum" class="btn btn-deal">🧩 NEXT: CONUNDRUM</button>
+                    <button id="btnEndGame" class="btn btn-submit" style="background:#ef4444;">🛑 END GAME</button>
                 </div>
                 
                 <div id="guestWaitMessage" class="hidden" style="color:#94a3b8; font-size:1.2rem;">
@@ -39,6 +40,7 @@ function attachEvents() {
     const btnLetters = containerRef.querySelector('#btnNextLetters');
     const btnNumbers = containerRef.querySelector('#btnNextNumbers');
     const btnConundrum = containerRef.querySelector('#btnNextConundrum');
+    const btnEndGame = containerRef.querySelector('#btnEndGame');
 
     if (btnLetters) {
         btnLetters.addEventListener('click', async () => {
@@ -88,6 +90,13 @@ function attachEvents() {
             });
         });
     }
+
+    if (btnEndGame) {
+        btnEndGame.addEventListener('click', async () => {
+            btnEndGame.disabled = true;
+            await multiplayerService.updateGameState({ status: 'lobby', activeScreen: 'lobby' });
+        });
+    }
 }
 
 function subscribeToScoreboardUpdates() {
@@ -97,8 +106,12 @@ function subscribeToScoreboardUpdates() {
     multiplayerService.listenToRoom(code, (roomData) => {
         if (!containerRef) return;
 
-        // Auto-launch the next round if the Host changed it
+        // Auto-launch the next round if the Host changed it or returned to lobby
         const isScoreboardVisible = document.getElementById('scoreboardList') !== null;
+        if (isScoreboardVisible && (roomData.status === 'lobby' || roomData.activeScreen === 'lobby') && onStartGameCallback) {
+            onStartGameCallback('lobby');
+            return;
+        }
         if (isScoreboardVisible && roomData.status === 'playing' && roomData.activeScreen && roomData.activeScreen !== 'scoreboard' && onStartGameCallback) {
             onStartGameCallback(roomData.activeScreen, roomData.gameData);
             return;
