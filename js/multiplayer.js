@@ -135,7 +135,8 @@ export class MultiplayerService {
         // Attach Firebase Realtime Listener
         const unsubscribe = onValue(roomRef, (snapshot) => {
             if (snapshot.exists()) {
-                callback(snapshot.val());
+                this.currentRoomData = snapshot.val();
+                callback(this.currentRoomData);
             }
         });
 
@@ -153,6 +154,15 @@ export class MultiplayerService {
             return player ? Boolean(player.isHost) : false;
         }
         return Boolean(this.isLocalHost);
+    }
+
+    /**
+     * 4b. GET CURRENT PLAYER TIME HANDICAP
+     */
+    getMyTimeHandicap() {
+        if (!this.currentPlayerId || !this.currentRoomData || !this.currentRoomData.players) return 30;
+        const me = this.currentRoomData.players[this.currentPlayerId];
+        return me ? (Number(me.timeHandicap) || 30) : 30;
     }
 
     /**

@@ -106,7 +106,7 @@ function startNewRound(initialGameData = null) {
 
     // Reset Clock
     const clockMount = containerRef.querySelector('#clockMount');
-    state.maxTime = 30;
+    state.maxTime = multiplayerService.currentRoomCode ? multiplayerService.getMyTimeHandicap() : 30;
     state.clockComp = new CountdownClockComponent(clockMount, state.maxTime);
     state.clockComp.update(0);
 
@@ -374,7 +374,7 @@ function resetAndStartTimer() {
     const clockMount = containerRef.querySelector('#clockMount');
     if (!clockMount) return;
 
-    state.maxTime = 30;
+    state.maxTime = multiplayerService.currentRoomCode ? multiplayerService.getMyTimeHandicap() : 30;
     state.clockComp = new CountdownClockComponent(clockMount, state.maxTime);
     state.remainingSeconds = state.maxTime;
     state.clockComp.update(0);
