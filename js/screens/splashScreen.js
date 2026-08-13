@@ -82,17 +82,17 @@ export function renderSplashScreen(container, onNavigate) {
                         <select id="hostTimeHandicap" class="styled-select" style="padding:5px 10px; font-size:0.88rem; border-radius:8px; border:2px solid var(--gold); background:#0f172a; color:#ffffff; font-weight:800;">
                             <option value="20">20 Seconds (Pro / Blitz)</option>
                             <option value="30" selected>30 Seconds (Default TV Clock)</option>
-                            <option value="45">45 Seconds (Relaxed Family)</option>
-                            <option value="60">60 Seconds (👑 Grandad Special)</option>
+                            <option value="45">45 Seconds (Chill)</option>
+                            <option value="60">60 Seconds (Noob)</option>
                         </select>
                     </div>
 
                     <div style="display:flex; flex-direction:column; gap:2px;">
                         <label style="font-size:0.78rem; color:#94a3b8; font-weight:800;">⭐ YOUR SCORE MULTIPLIER:</label>
                         <select id="hostScoreMultiplier" class="styled-select" style="padding:5px 10px; font-size:0.88rem; border-radius:8px; border:2px solid var(--gold); background:#0f172a; color:#ffffff; font-weight:800;">
-                            <option value="1.0">1.0x (Standard Points)</option>
+                            <option value="1.0">1.0x (Default TV)</option>
                             <option value="1.25">1.25x (+25% Bonus Points)</option>
-                            <option value="1.5">1.5x (👑 Grandad Special - +50% Bonus)</option>
+                            <option value="1.5">1.5x (Noob +50% bonus)</option>
                         </select>
                     </div>
 
@@ -124,17 +124,17 @@ export function renderSplashScreen(container, onNavigate) {
                             <select id="joinTimeHandicap" class="styled-select" style="padding:5px 10px; font-size:0.88rem; border-radius:8px; border:2px solid var(--gold); background:#0f172a; color:#ffffff; font-weight:800;">
                                 <option value="20">20 Seconds (Pro / Blitz)</option>
                                 <option value="30" selected>30 Seconds (Default TV Clock)</option>
-                                <option value="45">45 Seconds (Relaxed Family)</option>
-                                <option value="60">60 Seconds (👑 Grandad Special)</option>
+                                <option value="45">45 Seconds (Chill)</option>
+                                <option value="60">60 Seconds (Noob)</option>
                             </select>
                         </div>
 
                         <div style="display:flex; flex-direction:column; gap:2px;">
                             <label style="font-size:0.78rem; color:#94a3b8; font-weight:800;">⭐ YOUR SCORE MULTIPLIER:</label>
                             <select id="joinScoreMultiplier" class="styled-select" style="padding:5px 10px; font-size:0.88rem; border-radius:8px; border:2px solid var(--gold); background:#0f172a; color:#ffffff; font-weight:800;">
-                                <option value="1.0">1.0x (Standard Points)</option>
+                                <option value="1.0">1.0x (Default TV)</option>
                                 <option value="1.25">1.25x (+25% Bonus Points)</option>
-                                <option value="1.5">1.5x (👑 Grandad Special - +50% Bonus)</option>
+                                <option value="1.5">1.5x (Noob +50% bonus)</option>
                             </select>
                         </div>
                     </div>
