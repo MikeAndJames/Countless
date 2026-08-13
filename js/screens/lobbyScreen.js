@@ -27,7 +27,7 @@ export async function renderLobbyScreen(container, onStartGame) {
 
     if (!multiplayerService.currentRoomCode) {
         try {
-            await multiplayerService.createRoom('GRANDAD80', 'James & Mike');
+            await multiplayerService.createRoom('GRANDAD80', 'Gramps');
         } catch (e) {
             console.warn("Auto-creating room GRANDAD80:", e);
         }
