@@ -536,6 +536,22 @@ html, body {
     transform: scale(1.05);
 }
 
+.btn-kick {
+    background: #dc2626;
+    color: #ffffff;
+    border: 1px solid #ef4444;
+    border-radius: 6px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.btn-kick:hover {
+    background: #b91c1c;
+    transform: scale(1.05);
+}
+
 .workspace-card {
     background: #0f172a;
     border: 1px solid #334155;

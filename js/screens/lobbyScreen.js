@@ -191,10 +191,14 @@ function renderPlayerListUI(players) {
 
     playerListEl.innerHTML = '';
     const playerArray = Object.values(players);
+    const isHost = multiplayerService.isHost(players);
 
     playerArray.forEach(p => {
         const item = document.createElement('div');
         item.className = 'word-chip';
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
         item.style.padding = '8px 10px';
         item.style.fontSize = '0.9rem';
 
@@ -202,10 +206,24 @@ function renderPlayerListUI(players) {
         
         item.innerHTML = `
             <span>${p.isHost ? '👑 ' : '🎮 '}<strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold);">(YOU)</small>' : ''}</span>
-            <span class="chip-len" style="font-size:0.75rem; padding:2px 6px;">
-                ⏱️${p.timeHandicap || 30}s | ⭐${p.scoreMultiplier || 1.0}x
-            </span>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span class="chip-len" style="font-size:0.75rem; padding:2px 6px;">
+                    ⏱️${p.timeHandicap || 30}s | ⭐${p.scoreMultiplier || 1.0}x
+                </span>
+                ${isHost && !p.isHost ? `<button class="btn btn-kick" data-kick-id="${p.id}" style="padding:2px 6px; font-size:0.75rem; background:#dc2626; color:#fff; border:none; border-radius:4px; cursor:pointer;" title="Kick player from room">❌ KICK</button>` : ''}
+            </div>
         `;
+
+        const kickBtn = item.querySelector(`[data-kick-id="${p.id}"]`);
+        if (kickBtn) {
+            kickBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (confirm(`Kick ${p.name} from the room?`)) {
+                    await multiplayerService.kickPlayer(p.id);
+                }
+            });
+        }
+
         playerListEl.appendChild(item);
     });
 }

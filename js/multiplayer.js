@@ -179,6 +179,7 @@ export class MultiplayerService {
             activeScreen: roundType,
             gameData: gameData,
             roundResults: null, // Clear previous round results for fresh round!
+            startedAt: Date.now(), // Precise timestamp for client-side deadline calculation
             lastUpdated: Date.now()
         };
 
@@ -243,6 +244,79 @@ export class MultiplayerService {
             baseScore: rawScore,
             submittedAt: Date.now()
         });
+    }
+
+    /**
+     * 7b. SUBMIT ZERO-POINT RESULT FOR TIMED-OUT OR OFFLINE PLAYER
+     * Host or room writes a 0-score record on behalf of player who exceeded deadline.
+     */
+    async submitZeroResultForPlayer(playerId, reason = "Timed Out") {
+        if (!this.currentRoomCode || !playerId) return;
+        const subRef = ref(db, `rooms/${this.currentRoomCode}/roundResults/${playerId}`);
+        const subSnap = await get(subRef);
+        if (subSnap.exists()) return; // Player submitted in the meantime!
+
+        await set(subRef, {
+            id: playerId,
+            word: `(${reason})`,
+            steps: `(${reason})`,
+            score: 0,
+            baseScore: 0,
+            timedOut: true,
+            submittedAt: Date.now()
+        });
+        console.log(`Auto-submitted 0 PTS for player ${playerId}: ${reason}`);
+    }
+
+    /**
+     * 7c. KICK PLAYER FROM ROOM (Host Action)
+     * Removes the player completely from room, round results, and active lockouts.
+     */
+    async kickPlayer(playerId) {
+        if (!this.currentRoomCode || !playerId) return;
+        const cleanCode = this.currentRoomCode;
+
+        // 1. Remove player from players roster
+        const playerRef = ref(db, `rooms/${cleanCode}/players/${playerId}`);
+        await set(playerRef, null);
+
+        // 2. Remove player from current round results if present
+        const resultRef = ref(db, `rooms/${cleanCode}/roundResults/${playerId}`);
+        await set(resultRef, null);
+
+        // 3. Remove from conundrum lockouts if present
+        const roomRef = ref(db, `rooms/${cleanCode}`);
+        const snap = await get(roomRef);
+        if (snap.exists()) {
+            const roomData = snap.val();
+            if (roomData.conundrumState && Array.isArray(roomData.conundrumState.lockedOutPlayers)) {
+                const updatedLocked = roomData.conundrumState.lockedOutPlayers.filter(id => id !== playerId);
+                const cRef = ref(db, `rooms/${cleanCode}/conundrumState`);
+                await update(cRef, { lockedOutPlayers: updatedLocked });
+            }
+        }
+        console.log(`Kicked player ${playerId} from room ${cleanCode}`);
+    }
+
+    /**
+     * 7d. FORCE ADVANCE ROUND (Host Action)
+     * Automatically scores 0 for any unsubmitted players and immediately transitions to targetScreen.
+     */
+    async forceAdvanceRound(targetScreen = 'scoreboard') {
+        if (!this.currentRoomCode) return;
+        const roomRef = ref(db, `rooms/${this.currentRoomCode}`);
+        const snap = await get(roomRef);
+        if (snap.exists()) {
+            const data = snap.val();
+            const players = data.players || {};
+            const results = data.roundResults || {};
+            for (const pId of Object.keys(players)) {
+                if (!results[pId]) {
+                    await this.submitZeroResultForPlayer(pId, "Skipped by Host");
+                }
+            }
+        }
+        await this.broadcastRoundStart(targetScreen, null);
     }
 
     /**

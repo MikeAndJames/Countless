@@ -113,6 +113,7 @@ export function renderNumbersRound(container, initialGameData = null) {
                     <div id="resultsMultiplayerBoard" style="display:flex; flex-direction:column; gap:6px; flex:1; overflow-y:auto; padding-right:4px;">
                         <div style="color:#94a3b8; font-size:0.85rem;">Waiting for player submissions...</div>
                     </div>
+                    <div id="hostNextActionArea" style="margin-top:8px; flex-shrink:0;"></div>
                 </div>
 
                 <!-- AI SOLVER BUTTON -->
@@ -149,6 +150,7 @@ export function renderNumbersRound(container, initialGameData = null) {
 export function cleanupNumbersRound() {
     stopTimer();
     if (state.dealInterval) clearInterval(state.dealInterval);
+    if (state.resultsTickerInterval) clearInterval(state.resultsTickerInterval);
 }
 
 function attachEvents() {
@@ -682,17 +684,49 @@ function submitNumberScore() {
     }
 }
 
+let latestNumbersRoomData = null;
+
 function subscribeToMultiplayerEvents() {
     const code = multiplayerService.currentRoomCode;
     if (!code) return;
 
+    if (state.resultsTickerInterval) {
+        clearInterval(state.resultsTickerInterval);
+    }
+
+    state.resultsTickerInterval = setInterval(() => {
+        if (latestNumbersRoomData) {
+            checkAndEnforceNumbersTimeouts(latestNumbersRoomData);
+            renderScoreboardItemsUI(latestNumbersRoomData);
+        }
+    }, 1000);
+
     multiplayerService.listenToRoom(code, (roomData) => {
+        latestNumbersRoomData = roomData;
         if (roomData.activeScreen === 'scoreboard') {
             switchScreen('scoreboard');
             return;
         }
-        
+        checkAndEnforceNumbersTimeouts(roomData);
         renderScoreboardItemsUI(roomData);
+    });
+}
+
+function checkAndEnforceNumbersTimeouts(roomData) {
+    if (!roomData || !multiplayerService.isHost(roomData.players)) return;
+    const players = roomData.players || {};
+    const results = roomData.roundResults || {};
+    const startedAt = roomData.startedAt || (Date.now() - 30000);
+    const now = Date.now();
+
+    Object.values(players).forEach(p => {
+        if (!results[p.id]) {
+            const handicap = Number(p.timeHandicap) || 30;
+            const deadlineMs = startedAt + ((handicap + 30) * 1000); // Handicap + 30s grace
+            if (now >= deadlineMs) {
+                multiplayerService.submitZeroResultForPlayer(p.id, "Timed Out");
+            }
+        }
     });
 }
 
@@ -711,6 +745,9 @@ function renderScoreboardItemsUI(roomData) {
     boardEl.innerHTML = '';
     const players = roomData.players || {};
     const results = roomData.roundResults || {};
+    const startedAt = roomData.startedAt || (Date.now() - 30000);
+    const now = Date.now();
+    const isHost = multiplayerService.isHost(players);
 
     Object.values(players).forEach(p => {
         const res = results[p.id];
@@ -744,13 +781,30 @@ function renderScoreboardItemsUI(roomData) {
                 </div>
             `;
         } else {
+            const handicap = Number(p.timeHandicap) || 30;
+            const deadlineMs = startedAt + ((handicap + 30) * 1000);
+            const remainingSec = Math.max(0, Math.ceil((deadlineMs - now) / 1000));
+
             row.innerHTML = `
-                <div>
+                <div style="display:flex; align-items:center; gap:6px;">
                     <span>${p.isHost ? '👑 ' : '🎮 '}<strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold);">(YOU)</small>' : ''}:</span>
-                    <span style="color:#94a3b8; font-style:italic; margin-left:6px;">Calculating...</span>
+                    <span style="color:#94a3b8; font-style:italic; font-size:0.85rem;">Calculating...</span>
                 </div>
-                <span style="color:#94a3b8; font-size:0.85rem;">⏳ WAITING</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.8rem; color:#fbbf24; font-weight:700; background:rgba(245,158,11,0.15); padding:3px 8px; border-radius:6px; border:1px solid rgba(245,158,11,0.3);">⏳ ${remainingSec}s left</span>
+                    ${isHost && !p.isHost ? `<button class="btn btn-kick" data-kick-id="${p.id}" style="padding:2px 6px; font-size:0.75rem; background:#dc2626; color:#fff; border:none; border-radius:4px; cursor:pointer;" title="Kick Player">❌ KICK</button>` : ''}
+                </div>
             `;
+
+            const kickBtn = row.querySelector(`[data-kick-id="${p.id}"]`);
+            if (kickBtn) {
+                kickBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Kick ${p.name} from the game?`)) {
+                        await multiplayerService.kickPlayer(p.id);
+                    }
+                });
+            }
         }
         boardEl.appendChild(row);
     });
@@ -760,9 +814,9 @@ function renderScoreboardItemsUI(roomData) {
         const pCount = Object.keys(players).length;
         const rCount = Object.keys(results).length;
         
-        if (rCount >= pCount) {
-            if (multiplayerService.isHost(players)) {
-                actionArea.innerHTML = `<button id="btnViewScoreboard" class="btn btn-deal" style="font-size:1rem; padding:12px; width:100%;">🏆 VIEW CUMULATIVE SCOREBOARD</button>`;
+        if (rCount >= pCount && pCount > 0) {
+            if (isHost) {
+                actionArea.innerHTML = `<button id="btnViewScoreboard" class="btn btn-deal" style="font-size:1.05rem; padding:12px; width:100%; font-weight:900;">🏆 VIEW CUMULATIVE SCOREBOARD</button>`;
                 const btnScoreboard = document.getElementById('btnViewScoreboard');
                 if (btnScoreboard) {
                     btnScoreboard.addEventListener('click', async (e) => {
@@ -771,10 +825,26 @@ function renderScoreboardItemsUI(roomData) {
                     });
                 }
             } else {
-                actionArea.innerHTML = `Waiting for host to continue...`;
+                actionArea.innerHTML = `<div style="text-align:center; color:#94a3b8; font-weight:600; padding:8px;">Waiting for host to view scoreboard...</div>`;
             }
         } else {
-            actionArea.innerHTML = `Waiting for others to finish... (${rCount}/${pCount})`;
+            if (isHost) {
+                actionArea.innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
+                        <div style="text-align:center; color:#94a3b8; font-size:0.85rem; font-weight:600;">Waiting for all players to finish... (${rCount}/${pCount} submitted)</div>
+                        <button id="btnForceScoreboard" class="btn" style="width:100%; padding:10px; font-size:0.9rem; font-weight:800; background:#b45309; color:#ffffff; border:1px solid #f59e0b; border-radius:8px; cursor:pointer;">⚡ FORCE ADVANCE TO SCOREBOARD (SKIP WAITING)</button>
+                    </div>
+                `;
+                const btnForce = document.getElementById('btnForceScoreboard');
+                if (btnForce) {
+                    btnForce.addEventListener('click', async (e) => {
+                        e.target.disabled = true;
+                        await multiplayerService.forceAdvanceRound('scoreboard');
+                    });
+                }
+            } else {
+                actionArea.innerHTML = `<div style="text-align:center; color:#94a3b8; font-weight:600; padding:8px;">Waiting for others to finish... (${rCount}/${pCount})</div>`;
+            }
         }
     }
 }

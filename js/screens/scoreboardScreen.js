@@ -141,6 +141,7 @@ function renderLeaderboard(playersObj) {
 
     // Sort players by score descending
     const players = Object.values(playersObj).sort((a, b) => b.score - a.score);
+    const isHost = multiplayerService.isHost(playersObj);
 
     listEl.innerHTML = '';
     
@@ -151,7 +152,7 @@ function renderLeaderboard(playersObj) {
         row.style.display = 'flex';
         row.style.justifyContent = 'space-between';
         row.style.alignItems = 'center';
-        row.style.padding = '16px 20px';
+        row.style.padding = '14px 18px';
         if (isMe) {
             row.style.border = '2px solid var(--gold)';
             row.style.background = 'rgba(251, 191, 36, 0.1)';
@@ -163,15 +164,29 @@ function renderLeaderboard(playersObj) {
         else if (index === 2) medal = '🥉';
 
         row.innerHTML = `
-            <div style="font-size:1.4rem; display:flex; align-items:center; gap:10px;">
+            <div style="font-size:1.3rem; display:flex; align-items:center; gap:10px;">
                 <span style="width:30px; text-align:center;">${medal}</span>
-                <strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold); font-size:0.9rem;">(YOU)</small>' : ''}
-                <small style="color:#94a3b8; font-size:0.9rem; margin-left:10px;">[${p.scoreMultiplier}x]</small>
+                <strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold); font-size:0.85rem;">(YOU)</small>' : ''}
+                <small style="color:#94a3b8; font-size:0.85rem; margin-left:6px;">[${p.scoreMultiplier}x]</small>
             </div>
-            <div style="font-size:1.8rem; font-weight:900; color:var(--gold);">
-                ${p.score} PTS
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="font-size:1.6rem; font-weight:900; color:var(--gold);">
+                    ${p.score} PTS
+                </div>
+                ${isHost && !p.isHost ? `<button class="btn btn-kick" data-kick-id="${p.id}" style="padding:4px 8px; font-size:0.75rem; background:#dc2626; color:#fff; border:none; border-radius:4px; cursor:pointer;" title="Kick player from room">❌ KICK</button>` : ''}
             </div>
         `;
+
+        const kickBtn = row.querySelector(`[data-kick-id="${p.id}"]`);
+        if (kickBtn) {
+            kickBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (confirm(`Kick ${p.name} from the game?`)) {
+                    await multiplayerService.kickPlayer(p.id);
+                }
+            });
+        }
+
         listEl.appendChild(row);
     });
 }

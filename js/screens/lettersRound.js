@@ -77,6 +77,7 @@ export function renderLettersRound(container, initialGameData = null) {
 export function cleanupLettersRound() {
     stopTimer();
     if (state.dealInterval) clearInterval(state.dealInterval);
+    if (state.resultsTickerInterval) clearInterval(state.resultsTickerInterval);
 }
 
 function startNewRound(initialGameData = null) {
@@ -632,16 +633,51 @@ function renderResultsPhaseUI() {
     subscribeToMultiplayerResults();
 }
 
+let latestLettersRoomData = null;
+
 function subscribeToMultiplayerResults() {
     const code = multiplayerService.currentRoomCode;
     if (!code) return;
 
+    if (state.resultsTickerInterval) {
+        clearInterval(state.resultsTickerInterval);
+    }
+
+    // 1-second interval ticker for live client-side countdowns and deadline enforcement (0 extra network calls)
+    state.resultsTickerInterval = setInterval(() => {
+        if (latestLettersRoomData) {
+            checkAndEnforceTimeouts(latestLettersRoomData);
+            renderScoreboardItemsUI(latestLettersRoomData);
+        }
+    }, 1000);
+
     multiplayerService.listenToRoom(code, (roomData) => {
+        latestLettersRoomData = roomData;
         if (roomData.activeScreen === 'scoreboard') {
             switchScreen('scoreboard');
             return;
         }
+        checkAndEnforceTimeouts(roomData);
         renderScoreboardItemsUI(roomData);
+    });
+}
+
+function checkAndEnforceTimeouts(roomData) {
+    if (!roomData || !multiplayerService.isHost(roomData.players)) return;
+    const players = roomData.players || {};
+    const results = roomData.roundResults || {};
+    const startedAt = roomData.startedAt || (Date.now() - 30000);
+    const now = Date.now();
+
+    Object.values(players).forEach(p => {
+        if (!results[p.id]) {
+            const handicap = Number(p.timeHandicap) || 30;
+            const deadlineMs = startedAt + ((handicap + 10 + 30) * 1000); // Handicap + 10s decl + 30s grace
+            if (now >= deadlineMs) {
+                // Auto-submit 0 PTS for timed-out player
+                multiplayerService.submitZeroResultForPlayer(p.id, "Timed Out");
+            }
+        }
     });
 }
 
@@ -652,33 +688,66 @@ function renderScoreboardItemsUI(roomData) {
     boardEl.innerHTML = '';
     const players = roomData.players || {};
     const results = roomData.roundResults || {};
+    const startedAt = roomData.startedAt || (Date.now() - 30000);
+    const now = Date.now();
+    const isHost = multiplayerService.isHost(players);
 
     Object.values(players).forEach(p => {
+        const hasResult = Boolean(results[p.id]);
         const res = results[p.id] || { word: '...', score: 0 };
         const isMe = p.id === multiplayerService.currentPlayerId;
 
         const row = document.createElement('div');
         row.className = 'word-chip';
         row.style.display = 'flex';
-        row.style.justifySpaceBetween = 'space-between';
+        row.style.justifyContent = 'space-between';
         row.style.alignItems = 'center';
         row.style.padding = '8px 12px';
-        row.style.cursor = 'pointer';
 
-        row.innerHTML = `
-            <div>
-                <span>${p.isHost ? '👑 ' : '🎮 '}<strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold);">(YOU)</small>' : ''}:</span>
-                <strong style="color:var(--gold); font-size:1rem; margin-left:6px;">"${res.word}"</strong>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span class="chip-len" style="font-weight:900;">${res.score} PTS</span>
-                <span style="font-size:0.8rem; color:var(--cyan);">🔍 DEF</span>
-            </div>
-        `;
+        if (hasResult) {
+            row.style.cursor = 'pointer';
+            row.innerHTML = `
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span>${p.isHost ? '👑 ' : '🎮 '}<strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold);">(YOU)</small>' : ''}:</span>
+                    <strong style="color:var(--gold); font-size:1rem; margin-left:6px;">"${res.word}"</strong>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="chip-len" style="font-weight:900;">${res.score} PTS</span>
+                    ${res.word && !res.word.startsWith('(') ? '<span style="font-size:0.8rem; color:var(--cyan);">🔍 DEF</span>' : ''}
+                </div>
+            `;
+            if (res.word && !res.word.startsWith('(')) {
+                row.addEventListener('click', () => showWordInspector(res.word));
+            }
+        } else {
+            // Player still calculating / playing
+            const handicap = Number(p.timeHandicap) || 30;
+            const deadlineMs = startedAt + ((handicap + 10 + 30) * 1000);
+            const remainingSec = Math.max(0, Math.ceil((deadlineMs - now) / 1000));
 
-        if (res.word && res.word !== '...') {
-            row.addEventListener('click', () => showWordInspector(res.word));
+            row.innerHTML = `
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span>${p.isHost ? '👑 ' : '🎮 '}<strong>${p.name}</strong> ${isMe ? '<small style="color:var(--gold);">(YOU)</small>' : ''}:</span>
+                    <span style="color:#94a3b8; font-style:italic; font-size:0.85rem;">Calculating...</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.8rem; color:#fbbf24; font-weight:700; background:rgba(245,158,11,0.15); padding:3px 8px; border-radius:6px; border:1px solid rgba(245,158,11,0.3);">⏳ ${remainingSec}s left</span>
+                    ${isHost && !p.isHost ? `<button class="btn btn-kick" data-kick-id="${p.id}" style="padding:2px 6px; font-size:0.75rem; background:#dc2626; color:#fff; border:none; border-radius:4px; cursor:pointer;" title="Kick Player">❌ KICK</button>` : ''}
+                </div>
+            `;
+
+            // Attach kick button handler if host
+            const kickBtn = row.querySelector(`[data-kick-id="${p.id}"]`);
+            if (kickBtn) {
+                kickBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Kick ${p.name} from the game?`)) {
+                        await multiplayerService.kickPlayer(p.id);
+                    }
+                });
+            }
         }
+
         boardEl.appendChild(row);
     });
 
@@ -687,9 +756,9 @@ function renderScoreboardItemsUI(roomData) {
         const pCount = Object.keys(players).length;
         const rCount = Object.keys(results).length;
         
-        if (rCount >= pCount) {
-            if (multiplayerService.isHost(players)) {
-                actionArea.innerHTML = `<button id="btnViewScoreboard" class="btn btn-deal" style="font-size:1rem; padding:12px; width:100%;">🏆 VIEW CUMULATIVE SCOREBOARD</button>`;
+        if (rCount >= pCount && pCount > 0) {
+            if (isHost) {
+                actionArea.innerHTML = `<button id="btnViewScoreboard" class="btn btn-deal" style="font-size:1.05rem; padding:12px; width:100%; font-weight:900;">🏆 VIEW CUMULATIVE SCOREBOARD</button>`;
                 const btnScoreboard = document.getElementById('btnViewScoreboard');
                 if (btnScoreboard) {
                     btnScoreboard.addEventListener('click', async (e) => {
@@ -698,10 +767,26 @@ function renderScoreboardItemsUI(roomData) {
                     });
                 }
             } else {
-                actionArea.innerHTML = `Waiting for host to continue...`;
+                actionArea.innerHTML = `<div style="text-align:center; color:#94a3b8; font-weight:600; padding:8px;">Waiting for host to view scoreboard...</div>`;
             }
         } else {
-            actionArea.innerHTML = `Waiting for others to finish... (${rCount}/${pCount})`;
+            if (isHost) {
+                actionArea.innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
+                        <div style="text-align:center; color:#94a3b8; font-size:0.85rem; font-weight:600;">Waiting for all players to finish... (${rCount}/${pCount} submitted)</div>
+                        <button id="btnForceScoreboard" class="btn" style="width:100%; padding:10px; font-size:0.9rem; font-weight:800; background:#b45309; color:#ffffff; border:1px solid #f59e0b; border-radius:8px; cursor:pointer;">⚡ FORCE ADVANCE TO SCOREBOARD (SKIP WAITING)</button>
+                    </div>
+                `;
+                const btnForce = document.getElementById('btnForceScoreboard');
+                if (btnForce) {
+                    btnForce.addEventListener('click', async (e) => {
+                        e.target.disabled = true;
+                        await multiplayerService.forceAdvanceRound('scoreboard');
+                    });
+                }
+            } else {
+                actionArea.innerHTML = `<div style="text-align:center; color:#94a3b8; font-weight:600; padding:8px;">Waiting for others to finish... (${rCount}/${pCount})</div>`;
+            }
         }
     }
 
