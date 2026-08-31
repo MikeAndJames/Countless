@@ -53,6 +53,14 @@ export class MultiplayerService {
      */
     async createRoom(roomCode, hostName, timeHandicap = 30, scoreMultiplier = 1.0) {
         const cleanCode = roomCode.trim().toUpperCase();
+        const cleanHostName = (hostName && hostName.trim()) ? hostName.trim() : "Gramps";
+
+        try {
+            localStorage.setItem('countless_player_name', cleanHostName);
+            localStorage.setItem('countless_handicap', String(timeHandicap));
+            localStorage.setItem('countless_multiplier', String(scoreMultiplier));
+        } catch (e) {}
+
         this.currentRoomCode = cleanCode;
         this.currentPlayerId = `p_${Date.now()}`;
         this.isLocalHost = true;
@@ -60,14 +68,14 @@ export class MultiplayerService {
         const roomRef = ref(db, `rooms/${cleanCode}`);
         const roomData = {
             roomCode: cleanCode,
-            hostName: hostName,
+            hostName: cleanHostName,
             status: "lobby", // "lobby" | "playing" | "results"
             activeScreen: "splash",
             createdAt: Date.now(),
             players: {
                 [this.currentPlayerId]: {
                     id: this.currentPlayerId,
-                    name: hostName,
+                    name: cleanHostName,
                     isHost: true,
                     timeHandicap: Number(timeHandicap) || 30, // 20s, 30s (default), 45s, 60s
                     scoreMultiplier: Number(scoreMultiplier) || 1.0, // 1.0x, 1.25x, 1.5x
@@ -99,6 +107,36 @@ export class MultiplayerService {
             throw new Error(`Room "${cleanCode}" does not exist! Check the code and try again.`);
         }
 
+        const roomData = snapshot.val();
+        const existingPlayers = roomData.players || {};
+        const existingNames = new Set(
+            Object.values(existingPlayers).map(p => (p.name || '').trim().toLowerCase())
+        );
+
+        let requestedName = (playerName && playerName.trim()) ? playerName.trim() : "Gramps";
+        let finalName = requestedName;
+
+        // Auto-Deduplication: Prevents "Gramps11" and neatly assigns "Gramps 2", "Gramps 3", etc.
+        if (existingNames.has(finalName.toLowerCase())) {
+            // Strip any trailing digits or parenthesized digits: "Gramps 2", "Gramps11", "Gramps (2)" -> "Gramps"
+            const baseName = requestedName.replace(/\s*(\d+|\(\d+\))$/, '').trim() || requestedName;
+            let counter = 2;
+            while (
+                existingNames.has(`${baseName.toLowerCase()} ${counter}`) ||
+                existingNames.has(`${baseName.toLowerCase()}${counter}`) ||
+                existingNames.has(`${baseName.toLowerCase()} (${counter})`)
+            ) {
+                counter++;
+            }
+            finalName = `${baseName} ${counter}`;
+        }
+
+        try {
+            localStorage.setItem('countless_player_name', finalName);
+            localStorage.setItem('countless_handicap', String(timeHandicap));
+            localStorage.setItem('countless_multiplier', String(scoreMultiplier));
+        } catch (e) {}
+
         this.currentRoomCode = cleanCode;
         this.currentPlayerId = `p_${Date.now()}`;
         this.isLocalHost = false;
@@ -106,7 +144,7 @@ export class MultiplayerService {
         const playerRef = ref(db, `rooms/${cleanCode}/players/${this.currentPlayerId}`);
         const playerData = {
             id: this.currentPlayerId,
-            name: playerName,
+            name: finalName,
             isHost: false,
             timeHandicap: Number(timeHandicap) || 30,     // 20, 30 (default), 45, 60 seconds
             scoreMultiplier: Number(scoreMultiplier) || 1.25, // 1.0x, 1.25x, 1.5x
@@ -114,7 +152,7 @@ export class MultiplayerService {
         };
 
         await set(playerRef, playerData);
-        console.log(`Joined Firebase Room: ${cleanCode} as ${playerName}`);
+        console.log(`Joined Firebase Room: ${cleanCode} as ${finalName}`);
         return snapshot.val();
     }
 

@@ -309,6 +309,32 @@ function attachSplashEvents(onNavigate) {
     const btnConfirmHost = containerRef.querySelector('#btnConfirmHost');
     const btnConfirmJoin = containerRef.querySelector('#btnConfirmJoin');
 
+    // Populate modal inputs from localStorage if available
+    try {
+        const savedName = localStorage.getItem('countless_player_name');
+        const savedHandicap = localStorage.getItem('countless_handicap');
+        const savedMultiplier = localStorage.getItem('countless_multiplier');
+
+        if (savedName) {
+            const hostNameInput = containerRef.querySelector('#hostPlayerName');
+            const joinNameInput = containerRef.querySelector('#joinPlayerNameInput');
+            if (hostNameInput) hostNameInput.value = savedName;
+            if (joinNameInput) joinNameInput.value = savedName;
+        }
+        if (savedHandicap) {
+            const hostHandicapSelect = containerRef.querySelector('#hostTimeHandicap');
+            const joinHandicapSelect = containerRef.querySelector('#joinTimeHandicap');
+            if (hostHandicapSelect) hostHandicapSelect.value = savedHandicap;
+            if (joinHandicapSelect) joinHandicapSelect.value = savedHandicap;
+        }
+        if (savedMultiplier) {
+            const hostMultiplierSelect = containerRef.querySelector('#hostScoreMultiplier');
+            const joinMultiplierSelect = containerRef.querySelector('#joinScoreMultiplier');
+            if (hostMultiplierSelect) hostMultiplierSelect.value = savedMultiplier;
+            if (joinMultiplierSelect) joinMultiplierSelect.value = savedMultiplier;
+        }
+    } catch(e) {}
+
     btnHost.addEventListener('click', () => {
         playSound(600, 0.08);
         hostModal.classList.remove('hidden');
