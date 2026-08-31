@@ -430,40 +430,60 @@ html, body {
 .numbers-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 12px;
     background: #0f172a;
-    padding: 10px;
-    border-radius: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
     border: 2px solid #1e293b;
     align-items: center;
     justify-content: center;
-    min-height: 76px;
+    min-height: 88px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.numbers-grid.grid-hint-flash {
+    border-color: var(--gold);
+    box-shadow: 0 0 18px rgba(245, 158, 11, 0.7);
 }
 
 .number-tile {
-    width: 86px;
-    height: 56px;
-    font-size: 1.7rem;
+    width: 104px;
+    height: 70px;
+    font-size: 2.2rem;
     font-weight: 900;
     font-family: var(--font-mono);
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     justify-content: center;
     align-items: center;
     background: var(--top-tile-bg);
-    border: 2px solid var(--top-tile-border);
+    border: 3px solid var(--top-tile-border);
     color: var(--top-tile-text);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
     cursor: pointer;
     touch-action: manipulation;
     flex-shrink: 0;
     box-sizing: border-box;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .number-tile.selected {
-    border-color: var(--gold);
-    box-shadow: 0 0 14px var(--gold);
-    transform: scale(1.06);
+    border: 4px solid var(--gold) !important;
+    box-shadow: 0 0 22px rgba(245, 158, 11, 0.95), inset 0 0 12px rgba(245, 158, 11, 0.5);
+    transform: scale(1.08);
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+    animation: pulse-selected-tile 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse-selected-tile {
+    0%, 100% {
+        border-color: #f59e0b;
+        box-shadow: 0 0 18px rgba(245, 158, 11, 0.8), inset 0 0 8px rgba(245, 158, 11, 0.4);
+    }
+    50% {
+        border-color: #ffffff;
+        box-shadow: 0 0 28px rgba(245, 158, 11, 1), inset 0 0 14px rgba(245, 158, 11, 0.7);
+    }
 }
 
 .number-tile.created {
@@ -473,30 +493,47 @@ html, body {
 }
 
 .number-tile.used {
-    opacity: 0.25;
+    opacity: 0.22;
     filter: grayscale(100%);
-    transform: scale(0.88);
+    transform: scale(0.85);
     cursor: not-allowed;
     pointer-events: none;
-}
-
-.btn-op.selected {
-    background: var(--gold);
-    color: #0f172a;
-    box-shadow: 0 0 12px var(--gold);
 }
 
 .operators-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    gap: 12px;
 }
 
 .btn-op {
-    background: #334155;
+    background: #1e293b;
+    border: 2px solid #475569;
+    border-radius: 10px;
     color: #38bdf8;
-    font-size: 1.1rem;
-    padding: 10px;
+    font-size: 2.3rem;
+    font-weight: 900;
+    height: 56px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.15s ease;
+    touch-action: manipulation;
+}
+
+.btn-op:hover {
+    background: #334155;
+    border-color: #38bdf8;
+}
+
+.btn-op.selected {
+    background: var(--gold);
+    border-color: #fde047;
+    color: #0f172a;
+    box-shadow: 0 0 18px var(--gold);
+    transform: scale(1.05);
 }
 
 .workspace-card {

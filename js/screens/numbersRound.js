@@ -80,10 +80,10 @@ export function renderNumbersRound(container, initialGameData = null) {
 
                 <!-- MATH OPERATORS ROW -->
                 <div class="operators-row">
-                    <button class="btn btn-op" data-op="+">➕ ADD (+)</button>
-                    <button class="btn btn-op" data-op="-">➖ SUB (-)</button>
-                    <button class="btn btn-op" data-op="*">✖️ MULT (×)</button>
-                    <button class="btn btn-op" data-op="/">➗ DIV (÷)</button>
+                    <button class="btn btn-op" data-op="+" aria-label="Add">+</button>
+                    <button class="btn btn-op" data-op="-" aria-label="Subtract">−</button>
+                    <button class="btn btn-op" data-op="*" aria-label="Multiply">×</button>
+                    <button class="btn btn-op" data-op="/" aria-label="Divide">÷</button>
                 </div>
 
                 <!-- ACTIONS ROW -->
@@ -172,7 +172,7 @@ function attachEvents() {
     });
 
     opBtns.forEach(btn => {
-        btn.addEventListener('click', () => selectOperator(btn.getAttribute('data-op')));
+        addTapListener(btn, () => selectOperator(btn.getAttribute('data-op')));
     });
 }
 
@@ -253,15 +253,17 @@ function startNewNumbersRound(initialGameData = null) {
     }, 700);
 }
 
-function addTouchAndClickListener(element, handler) {
-    let touched = false;
+function addTapListener(element, handler) {
+    let pointerHandled = false;
     element.addEventListener('pointerdown', (e) => {
-        touched = true;
+        if (e.button !== undefined && e.button !== 0) return; // Only primary button/touch
+        pointerHandled = true;
+        e.preventDefault(); // Prevents ghost/duplicate clicks on newly re-rendered DOM elements
         handler(e);
     });
     element.addEventListener('click', (e) => {
-        if (touched) {
-            touched = false;
+        if (pointerHandled) {
+            pointerHandled = false;
             return;
         }
         handler(e);
@@ -285,7 +287,7 @@ function renderTilesUI() {
         card.textContent = tile.val;
 
         if (!state.isDealing && !tile.used) {
-            addTouchAndClickListener(card, () => handleTileClick(tile));
+            addTapListener(card, () => handleTileClick(tile));
         }
         grid.appendChild(card);
     });
@@ -337,6 +339,13 @@ function handleTileClick(tile) {
 function selectOperator(op) {
     if (state.isDealing) return;
     if (state.selectedFirst === null) {
+        // Audible & visual feedback that a number tile must be picked first
+        playSound(250, 0.08);
+        const grid = containerRef.querySelector('#numbersTilesGrid');
+        if (grid) {
+            grid.classList.add('grid-hint-flash');
+            setTimeout(() => grid.classList.remove('grid-hint-flash'), 400);
+        }
         return;
     }
     state.selectedOp = op;
@@ -450,7 +459,7 @@ function renderHistoryUI() {
         chip.style.fontSize = '0.88rem';
         chip.innerHTML = `<span>↩️ ${step.text}</span><span style="font-size:0.75rem; color:var(--gold); font-weight:800;">UNDOS</span>`;
         
-        addTouchAndClickListener(chip, () => {
+        addTapListener(chip, () => {
             const createdTile = state.workingTiles.find(t => t.id === step.createdId);
             if (createdTile) {
                 cancelCreatedTile(createdTile);
