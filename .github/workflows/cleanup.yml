@@ -1,0 +1,23 @@
+name: Nightly Stale Room Cleanup
+
+on:
+  schedule:
+    # Runs daily at 03:00 UTC (Nightly maintenance)
+    - cron: '0 3 * * *'
+  # Allows manual triggering anytime from GitHub Actions tab for immediate testing!
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Stale Room Purge
+        run: node scripts/cleanupRooms.js
